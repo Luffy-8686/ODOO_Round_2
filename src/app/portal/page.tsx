@@ -85,6 +85,9 @@ export default function MemberPortalPage(props: any) {
   const [confirmSlotModal, setConfirmSlotModal] = useState<{ court: any; time: string } | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [isBookingSubmitting, setIsBookingSubmitting] = useState(false);
+  const [socialSessions, setSocialSessions] = useState<any[]>([]);
+  const [joiningSocialId, setJoiningSocialId] = useState<string | null>(null);
+  const [socialJoinSuccess, setSocialJoinSuccess] = useState<string | null>(null);
 
   // Bar & Cafe Ordering state
   const [cafeSubTab, setCafeSubTab] = useState<"MENU" | "TABLES" | "ORDERS">("MENU");
@@ -165,6 +168,7 @@ export default function MemberPortalPage(props: any) {
       if (crtData.courts) setCourts(crtData.courts);
       if (crtData.bookings) setDayBookings(crtData.bookings);
       if (crtData.holds) setDayHolds(crtData.holds);
+      if (crtData.socialSessions) setSocialSessions(crtData.socialSessions);
       if (prdData.products) setProducts(prdData.products);
       if (menuData.items) setMenuItems(menuData.items);
       if (tblData.tables) {
@@ -253,6 +257,35 @@ export default function MemberPortalPage(props: any) {
     setConfirmSlotModal(null);
     setModalError(null);
     await fetchMemberData();
+  };
+
+  const handleJoinSocialSession = async (session: any) => {
+    setJoiningSocialId(session.id);
+    setBookingError(null);
+    setSocialJoinSuccess(null);
+    try {
+      const res = await fetch("/api/courts/social", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          socialSessionId: session.id,
+          memberId: member?.id,
+          guestName: member?.name || currentUser?.name || "Member",
+          guestPhone: member?.phone || currentUser?.phone || "+91 99999 99999",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setBookingError(data.error || "Failed to join Social Session.");
+      } else {
+        setSocialJoinSuccess(`🎉 Confirmed! You are registered for "${session.name}". See you on the court!`);
+        await fetchMemberData();
+      }
+    } catch (err: any) {
+      setBookingError(err.message || "Failed to join Social Session.");
+    } finally {
+      setJoiningSocialId(null);
+    }
   };
 
   const handlePortalBooking = async (court: any, time: string) => {
@@ -1214,34 +1247,89 @@ export default function MemberPortalPage(props: any) {
             </div>
           </div>
 
-          {/* Feedback alerts */}
-          {bookingError && (
-            <div className="p-3.5 rounded-md bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
-              <span>{bookingError}</span>
-            </div>
-          )}
+          {/* FRIDAY NIGHT SOCIAL PLAY FEATURE CARD */}
+          {socialSessions && socialSessions.length > 0 && (
+            <div className="space-y-3">
+              {socialSessions.map((session) => {
+                const isMemberEnrolled = session.participants?.some(
+                  (p: any) => (p.memberId && p.memberId === member?.id) || (p.guestName && p.guestName === (member?.name || currentUser?.name))
+                );
+                const isFull = (session.participants?.length || 0) >= session.capacity;
+                const courtObj = courts.find((c) => c.id === session.courtId);
 
-          {bookingSuccess && (
-            <div className="p-4 rounded-md bg-[#C5A059]/15 border border-[#C5A059]/40 text-[#0B1320] dark:text-white text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <CheckCircle2 className="w-5 h-5 text-[#8C6D23] dark:text-[#DFCA9B] shrink-0" />
-                <div>
-                  <p className="font-serif font-bold text-sm">Court Slot #{bookingSuccess.bookingNumber} Confirmed</p>
-                  <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] mt-0.5">
-                    Your match reservation has been locked into the club register. Check your digital match voucher anytime.
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  setSelectedBookingModal(bookingSuccess);
-                  setActiveTab("MY_BOOKINGS");
-                }}
-                className="px-4 py-2 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider shrink-0 transition-all shadow-sm"
-              >
-                View Match Pass
-              </button>
+                return (
+                  <div
+                    key={session.id}
+                    className="p-5 rounded-lg bg-gradient-to-r from-[#0B1320] via-[#162032] to-[#0B1320] text-white border-2 border-[#C5A059] shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+                  >
+                    <div className="space-y-1.5 max-w-xl">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="px-2.5 py-0.5 rounded bg-[#C5A059] text-slate-950 text-[10px] font-mono font-bold uppercase tracking-wider">
+                          🏆 FRIDAY NIGHT SOCIAL PLAY
+                        </span>
+                        <span className="text-xs text-[#DFCA9B] font-mono">
+                          {formatDateTime(session.startTime)} – {new Date(session.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        <span className="text-[10px] text-slate-300 bg-white/10 px-2 py-0.5 rounded font-medium">
+                          {courtObj?.name || "Padel Court 1"}
+                        </span>
+                      </div>
+
+                      <h4 className="font-serif text-lg font-bold text-white tracking-wide">
+                        {session.name}
+                      </h4>
+                      <p className="text-xs text-slate-300 leading-relaxed">
+                        {session.description || "Multi-player court sharing session. Rotate partners in King-of-the-Court doubles matches with music and refreshments."}
+                      </p>
+
+                      <div className="flex items-center gap-4 text-xs pt-1 text-[#DFCA9B]">
+                        <span>👥 <strong>{session.participants?.length || 0}/{session.capacity}</strong> Players Enrolled</span>
+                        <span>💳 Tariff: <strong>{formatINR(session.pricePerPersonPaise || 35000)} / player</strong></span>
+                      </div>
+
+                      {/* Participant tags */}
+                      {session.participants && session.participants.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-2">
+                          {session.participants.map((p: any) => (
+                            <span
+                              key={p.id}
+                              className={`text-[10px] px-2 py-0.5 rounded border font-medium ${
+                                p.memberId === member?.id || p.guestName === (member?.name || currentUser?.name)
+                                  ? "bg-emerald-500/20 text-emerald-300 border-emerald-400 font-bold"
+                                  : "bg-white/10 text-slate-200 border-white/20"
+                              }`}
+                            >
+                              🎾 {p.guestName} {p.memberId === member?.id ? "(You)" : ""}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="shrink-0 w-full md:w-auto">
+                      {isMemberEnrolled ? (
+                        <div className="px-4 py-2.5 rounded-md bg-emerald-500/20 border border-emerald-400 text-emerald-300 text-xs font-bold uppercase tracking-wider text-center flex items-center justify-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Pass Confirmed (Enrolled)</span>
+                        </div>
+                      ) : isFull ? (
+                        <div className="px-4 py-2.5 rounded-md bg-slate-800 border border-slate-700 text-slate-400 text-xs font-bold uppercase tracking-wider text-center">
+                          Session Full (12/12)
+                        </div>
+                      ) : (
+                        <button
+                          disabled={joiningSocialId === session.id}
+                          onClick={() => handleJoinSocialSession(session)}
+                          className="w-full md:w-auto px-5 py-3 rounded-md bg-[#C5A059] hover:bg-[#B38F46] text-[#0B1320] font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          <span>{joiningSocialId === session.id ? "Enrolling..." : `Join Social Play (${formatINR(session.pricePerPersonPaise || 35000)})`}</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -2601,6 +2689,195 @@ export default function MemberPortalPage(props: any) {
               >
                 <span>Renew / Upgrade Plan</span>
                 <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. CONFLICT & BOOKING ERROR INTERACTIVE POPUP DIALOG */}
+      {bookingError && (
+        <div className="fixed inset-0 z-50 bg-[#0B1320]/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0E1522] rounded-xl max-w-md w-full border-2 border-red-500/80 p-6 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95">
+            <button
+              onClick={() => setBookingError(null)}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-[#FAF8F5] dark:hover:bg-[#121A28] text-[#6B7280] hover:text-[#0B1320] dark:hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3.5 pb-3 border-b border-[#E5DFD5] dark:border-[#222D3E]">
+              <div className="w-12 h-12 rounded-lg bg-red-100 dark:bg-red-950/60 border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 flex items-center justify-center text-2xl shadow-sm shrink-0">
+                <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <span className="text-[9px] font-mono font-bold uppercase tracking-[0.2em] text-red-600 dark:text-red-400 block">
+                  Reservation Conflict Notice
+                </span>
+                <h3 className="font-serif font-bold text-lg text-[#0B1320] dark:text-white">
+                  Booking Unable to Proceed
+                </h3>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-lg bg-red-50/70 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-xs text-red-800 dark:text-red-200 leading-relaxed font-medium">
+              {bookingError}
+            </div>
+
+            <div className="text-xs text-[#6B7280] dark:text-[#9CA3AF] leading-relaxed">
+              {bookingError.includes("Social Play")
+                ? "On Friday evenings, this court is open for shared group play. You can join the Friday Night Social session directly to play with the community."
+                : bookingError.includes("quota")
+                ? "Club rules limit reservations to 2 bookings per member per day. Please select another date or cancel an existing reservation."
+                : "Please select an alternate court facility or open time slot."}
+            </div>
+
+            <div className="pt-2 border-t border-[#E5DFD5] dark:border-[#222D3E]">
+              <button
+                type="button"
+                onClick={() => setBookingError(null)}
+                className="w-full py-2.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
+              >
+                Dismiss / Choose Another Slot
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 7. COURT BOOKING CONFIRMATION INTERACTIVE POPUP DIALOG */}
+      {bookingSuccess && (
+        <div className="fixed inset-0 z-50 bg-[#0B1320]/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0E1522] rounded-xl max-w-md w-full border-2 border-[#C5A059] p-6 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95">
+            <button
+              onClick={() => setBookingSuccess(null)}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-[#FAF8F5] dark:hover:bg-[#121A28] text-[#6B7280] hover:text-[#0B1320] dark:hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3.5 pb-3 border-b border-[#E5DFD5] dark:border-[#222D3E]">
+              <div className="w-12 h-12 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-sm shrink-0">
+                <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <span className="text-[9px] font-mono font-bold uppercase tracking-[0.2em] text-[#8C6D23] dark:text-[#DFCA9B] block">
+                  Championship Register Locked
+                </span>
+                <h3 className="font-serif font-bold text-lg text-[#0B1320] dark:text-white">
+                  Court Slot Reserved!
+                </h3>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-lg bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] space-y-3 text-xs">
+              <div className="flex items-center justify-between pb-2 border-b border-[#E5DFD5] dark:border-[#222D3E]">
+                <span className="text-[#8C6D23] dark:text-[#DFCA9B] font-bold uppercase tracking-wider text-[10px]">Pass Voucher</span>
+                <span className="font-mono font-bold text-sm text-[#0B1320] dark:text-white">
+                  {bookingSuccess.bookingNumber}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-[9px] text-[#6B7280] dark:text-[#9CA3AF] uppercase font-bold block">Facility</span>
+                  <span className="font-serif font-bold text-[#0B1320] dark:text-white mt-0.5 block">
+                    {bookingSuccess.court?.name || "Championship Court"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-[#6B7280] dark:text-[#9CA3AF] uppercase font-bold block">Match Time</span>
+                  <span className="font-serif font-bold text-[#0B1320] dark:text-white mt-0.5 block">
+                    {bookingSuccess.startTime ? formatDateTime(bookingSuccess.startTime) : "Scheduled"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-[#6B7280] dark:text-[#9CA3AF] uppercase font-bold block">Duration</span>
+                  <span className="font-serif font-bold text-[#0B1320] dark:text-white mt-0.5 block">
+                    {bookingSuccess.durationMinutes || 60} Minutes
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-[#6B7280] dark:text-[#9CA3AF] uppercase font-bold block">Tariff</span>
+                  <span className="font-bold text-[#921111] dark:text-[#DFCA9B] mt-0.5 block">
+                    {bookingSuccess.totalPricePaise === 0 ? "Complimentary (Perk)" : formatINR(bookingSuccess.totalPricePaise)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] leading-relaxed">
+              Your booking voucher is recorded in the club system. Present your digital QR code at the front desk when arriving.
+            </p>
+
+            <div className="flex items-center gap-2 pt-2 border-t border-[#E5DFD5] dark:border-[#222D3E]">
+              <button
+                type="button"
+                onClick={() => setBookingSuccess(null)}
+                className="flex-1 py-2.5 rounded-md bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] hover:bg-[#FAF8F5]/80 text-[#4B5563] dark:text-[#9CA3AF] font-bold text-xs uppercase tracking-wider transition-colors"
+              >
+                Done
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const b = bookingSuccess;
+                  setBookingSuccess(null);
+                  setSelectedBookingModal(b);
+                  setActiveTab("MY_BOOKINGS");
+                }}
+                className="flex-1 py-2.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm transition-all"
+              >
+                <QrCode className="w-3.5 h-3.5" />
+                <span>View Match Pass</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 8. SOCIAL PLAY REGISTRATION CONFIRMATION POPUP DIALOG */}
+      {socialJoinSuccess && (
+        <div className="fixed inset-0 z-50 bg-[#0B1320]/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0E1522] rounded-xl max-w-md w-full border-2 border-[#C5A059] p-6 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95">
+            <button
+              onClick={() => setSocialJoinSuccess(null)}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-[#FAF8F5] dark:hover:bg-[#121A28] text-[#6B7280] hover:text-[#0B1320] dark:hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3.5 pb-3 border-b border-[#E5DFD5] dark:border-[#222D3E]">
+              <div className="w-12 h-12 rounded-lg bg-[#FAF7EE] dark:bg-[#1C1608] border border-[#DFCA9B] text-[#8C6D23] dark:text-[#DFCA9B] flex items-center justify-center text-2xl shadow-sm shrink-0">
+                🏆
+              </div>
+              <div>
+                <span className="text-[9px] font-mono font-bold uppercase tracking-[0.2em] text-[#8C6D23] dark:text-[#DFCA9B] block">
+                  Court Sharing Confirmed
+                </span>
+                <h3 className="font-serif font-bold text-lg text-[#0B1320] dark:text-white">
+                  You're On The Roster!
+                </h3>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-lg bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-xs text-emerald-900 dark:text-emerald-200 leading-relaxed font-medium">
+              {socialJoinSuccess}
+            </div>
+
+            <div className="p-3.5 rounded-md bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] text-xs text-[#6B7280] dark:text-[#9CA3AF] space-y-1">
+              <p className="font-bold text-[#0B1320] dark:text-white">Session Highlights:</p>
+              <p>• Arrive at Padel Court 1 at 7:00 PM on Friday.</p>
+              <p>• King-of-the-court doubles partner rotations.</p>
+              <p>• Music, refreshments & clubhouse privileges included.</p>
+            </div>
+
+            <div className="pt-2 border-t border-[#E5DFD5] dark:border-[#222D3E]">
+              <button
+                type="button"
+                onClick={() => setSocialJoinSuccess(null)}
+                className="w-full py-2.5 rounded-md bg-[#C5A059] hover:bg-[#B38F46] text-[#0B1320] font-bold text-xs uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
+              >
+                Awesome, See You There!
               </button>
             </div>
           </div>

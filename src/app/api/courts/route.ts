@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getActiveHolds } from "@/lib/concurrency";
+import { ensureFridaySocialSession } from "@/lib/social";
 
 export async function GET(req: Request) {
   try {
@@ -25,6 +26,9 @@ export async function GET(req: Request) {
     let holds: any[] = [];
 
     if (dateStr) {
+      // Auto-ensure Friday Night Social Session for every Friday
+      await ensureFridaySocialSession(dateStr);
+
       holds = getActiveHolds(dateStr);
       const startOfDay = new Date(`${dateStr}T00:00:00.000Z`);
       const endOfDay = new Date(`${dateStr}T23:59:59.999Z`);

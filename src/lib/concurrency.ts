@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import { calculateCourtPrice, isPeakHour } from "./pricing";
 import { logAudit } from "./audit";
 import { sendNotification } from "./notifications";
+import { ensureFridaySocialSession } from "./social";
 
 export interface CreateBookingInput {
   courtId: string;
@@ -195,7 +196,13 @@ export async function checkCourtAvailability(
     };
   }
 
-  // 3. Check social sessions
+  // 3. Check social sessions (auto-ensure recurring Friday Night Social session)
+  try {
+    await ensureFridaySocialSession(startTime, db);
+  } catch (e) {
+    // Non-fatal if social session auto-create fails
+  }
+
   const socialSessions = await db.socialSession.findMany({
     where: {
       courtId,
