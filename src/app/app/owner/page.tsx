@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { formatINR, formatDateTime } from "@/lib/formatters";
 import {
   TrendingUp,
+  TrendingDown,
   DollarSign,
   Users,
   Calendar,
@@ -118,9 +119,18 @@ export default function OwnerExecutivePage() {
           <div className="text-2xl font-serif font-bold text-[#0B1320] dark:text-white mt-2">
             {formatINR(data?.totalRevenuePaise || 0)}
           </div>
-          <div className="flex items-center gap-1 text-[11px] text-[#8C6D23] dark:text-[#DFCA9B] font-semibold mt-2">
-            <TrendingUp className="w-3.5 h-3.5 text-[#921111]" />
-            <span>+18.4% vs previous benchmark</span>
+          <div className="flex items-center gap-1 text-[11px] font-semibold mt-2">
+            {(data?.growthPercent ?? 0) >= 0 ? (
+              <>
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span className="text-emerald-700 dark:text-emerald-400">+{data?.growthPercent}% vs previous period</span>
+              </>
+            ) : (
+              <>
+                <TrendingDown className="w-3.5 h-3.5 text-[#921111] dark:text-red-400" />
+                <span className="text-[#921111] dark:text-red-400">{data?.growthPercent}% vs previous period</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -135,8 +145,9 @@ export default function OwnerExecutivePage() {
           <div className="text-2xl font-serif font-bold text-[#0B1320] dark:text-white mt-2">
             {formatINR(data?.netProfitPaise || 0)}
           </div>
-          <div className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] mt-2">
-            Operating Expenses: {formatINR(data?.totalExpensesPaise || 0)}
+          <div className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] mt-2 flex items-center justify-between">
+            <span>Expenses: {formatINR(data?.totalExpensesPaise || 0)}</span>
+            <span className="font-semibold text-emerald-700 dark:text-emerald-400">{data?.marginPercent || 0}% Margin</span>
           </div>
         </div>
 

@@ -482,8 +482,25 @@ async function main() {
     const planId = tier === "GOLD" ? goldPlan.id : tier === "SILVER" ? silverPlan.id : juniorPlan.id;
     const isJunior = tier === "JUNIOR";
     const birthYear = isJunior ? 2008 + (i % 6) : 1975 + (i % 25);
-    const status = i === 4 ? "EXPIRING_SOON" : i === 7 ? "EXPIRED" : "ACTIVE";
-    const daysRemaining = status === "EXPIRED" ? -5 : status === "EXPIRING_SOON" ? 4 : 45 + (i * 5);
+    const status = i === 34 ? "EXPIRING_SOON" : i === 37 ? "EXPIRED" : "ACTIVE";
+
+    // Distribute join dates across time horizons
+    let daysRemaining = 120;
+    if (status === "EXPIRED") {
+      daysRemaining = -5;
+    } else if (status === "EXPIRING_SOON") {
+      daysRemaining = 4;
+    } else if (i < 2) {
+      daysRemaining = 365; // Joined TODAY
+    } else if (i < 6) {
+      daysRemaining = 365 - (i * 2 - 1); // Joined in last 7 days (days -3, -5, -7)
+    } else if (i < 18) {
+      daysRemaining = 365 - (i * 2 + 3); // Joined in last 8-30 days
+    } else if (i < 30) {
+      daysRemaining = 365 - (i * 2 + 8); // Joined in previous 30 days (days -31 to -60)
+    } else {
+      daysRemaining = 45 + ((i % 20) * 8); // Joined earlier in the year
+    }
 
     memberData.push({
       name: indianNames[i],
@@ -498,6 +515,8 @@ async function main() {
   }
 
   const createdMembers = [];
+  const now = new Date();
+
   for (let i = 0; i < memberData.length; i++) {
     const m = memberData[i];
     const memberCode = `CC-2024-${String(i + 1).padStart(3, "0")}`;
@@ -533,10 +552,12 @@ async function main() {
     });
 
     // Create Membership record
-    const startDate = new Date();
+    const startDate = new Date(now);
     startDate.setDate(startDate.getDate() - (365 - m.daysRemaining));
-    const endDate = new Date();
+    const endDate = new Date(now);
     endDate.setDate(endDate.getDate() + m.daysRemaining);
+
+    const membershipAmount = m.tier === "GOLD" ? 5000000 : m.tier === "SILVER" ? 2500000 : 1500000;
 
     await prisma.membership.create({
       data: {
@@ -546,10 +567,59 @@ async function main() {
         startDate,
         endDate,
         status: m.status === "EXPIRED" ? "EXPIRED" : "ACTIVE",
-        amountPaidPaise: m.tier === "GOLD" ? 5000000 : m.tier === "SILVER" ? 2500000 : 1500000,
+        amountPaidPaise: membershipAmount,
         paymentMethod: "UPI",
       },
     });
+
+    // Create Ledger Inflow Transaction for Membership
+    await prisma.ledgerTransaction.create({
+      data: {
+        entryNumber: `TX-MEM-${String(i + 1).padStart(5, "0")}`,
+        date: startDate,
+        description: `Annual Membership Subscription (${m.tier} Tier) - ${m.name}`,
+        module: "MEMBERSHIPS",
+        creditPaise: membershipAmount,
+        paymentMethod: "UPI",
+        taxAmountPaise: Math.round(membershipAmount * 0.18),
+        referenceType: "MEMBERSHIP",
+      },
+    });
+
+    // Create GST Invoices for recent members
+    if (i < 15) {
+      const subtotal = Math.round(membershipAmount / 1.18);
+      const tax = membershipAmount - subtotal;
+      const cgst = Math.round(tax / 2);
+      const sgst = tax - cgst;
+      await prisma.invoice.create({
+        data: {
+          invoiceNumber: `INV-${now.getFullYear()}-${String(i + 1).padStart(4, "0")}`,
+          memberId: member.id,
+          clientName: m.name,
+          clientAddress: "Bengaluru, Karnataka",
+          issueDate: startDate,
+          dueDate: new Date(startDate.getTime() + 15 * 24 * 60 * 60 * 1000),
+          subtotalPaise: subtotal,
+          taxAmountPaise: tax,
+          cgstPaise: cgst,
+          sgstPaise: sgst,
+          totalPaise: membershipAmount,
+          status: "PAID",
+          lines: {
+            create: [
+              {
+                description: `Annual ${m.tier} Membership Subscription Plan (CGST 9% + SGST 9%)`,
+                quantity: 1,
+                unitPricePaise: subtotal,
+                taxRatePercent: 18,
+                totalPaise: membershipAmount,
+              },
+            ],
+          },
+        },
+      });
+    }
 
     createdMembers.push(member);
   }
@@ -736,6 +806,9 @@ async function main() {
     },
   ];
 
+  const createdProducts = [];
+  const createdVariants: any[] = [];
+
   for (const prod of productsData) {
     const p = await prisma.product.create({
       data: {
@@ -748,9 +821,10 @@ async function main() {
         reorderLevel: prod.reorderLevel,
       },
     });
+    createdProducts.push(p);
 
     for (const v of prod.variants) {
-      await prisma.productVariant.create({
+      const pv = await prisma.productVariant.create({
         data: {
           productId: p.id,
           sku: v.sku,
@@ -759,6 +833,7 @@ async function main() {
           stockQuantity: v.stockQuantity,
         },
       });
+      createdVariants.push({ ...pv, product: p });
     }
   }
 
@@ -780,7 +855,6 @@ async function main() {
   });
 
   // 11. Historical & Today Bookings (300+ entries)
-  const now = new Date();
   let bookingSeq = 1;
   const bookingsToCreate = [];
   const ledgerEntriesToCreate = [];
@@ -852,6 +926,131 @@ async function main() {
 
   for (const tx of ledgerEntriesToCreate) {
     await prisma.ledgerTransaction.create({ data: tx });
+  }
+
+  // 11.b Historical Pro Shop Sales across the last 45 days
+  let shopOrderSeq = 1;
+  for (let d = -45; d <= 0; d++) {
+    const orderDate = new Date(now);
+    orderDate.setDate(orderDate.getDate() + d);
+    orderDate.setHours(11 + (Math.abs(d) % 8), 15 + (Math.abs(d * 7) % 40), 0, 0);
+
+    const mIdx = (Math.abs(d) + 3) % createdMembers.length;
+    const member = createdMembers[mIdx];
+    const isMember = d % 4 !== 0;
+
+    const variant = createdVariants[Math.abs(d) % createdVariants.length];
+    const price = variant.product.pricePaise;
+    const discount = isMember ? Math.round(price * 0.1) : 0;
+    const finalPrice = price - discount;
+
+    const shopOrderNumber = `SO-${now.getFullYear()}-${String(shopOrderSeq++).padStart(5, "0")}`;
+    const so = await prisma.shopOrder.create({
+      data: {
+        orderNumber: shopOrderNumber,
+        memberId: isMember ? member.id : null,
+        customerName: isMember ? member.name : "Walk-in Customer",
+        customerPhone: isMember ? member.phone : "+91 99999 00000",
+        customerEmail: isMember ? member.email : "guest@championsclub.in",
+        fulfillmentType: "CLICK_AND_COLLECT",
+        status: "COMPLETED",
+        totalPricePaise: price,
+        discountPaise: discount,
+        finalPricePaise: finalPrice,
+        paymentMethod: "UPI",
+        paymentStatus: "PAID",
+        createdAt: orderDate,
+      },
+    });
+
+    await prisma.orderItem.create({
+      data: {
+        shopOrderId: so.id,
+        variantId: variant.id,
+        quantity: 1,
+        unitPricePaise: price,
+        totalPricePaise: price,
+      },
+    });
+
+    await prisma.ledgerTransaction.create({
+      data: {
+        entryNumber: `TX-SHOP-${String(shopOrderSeq).padStart(5, "0")}`,
+        date: orderDate,
+        description: `Pro Shop Sale - ${variant.product.name} (${shopOrderNumber})`,
+        module: "SHOP",
+        creditPaise: finalPrice,
+        paymentMethod: "UPI",
+        taxAmountPaise: Math.round(finalPrice * 0.18),
+        referenceType: "SHOP_ORDER",
+        referenceId: so.id,
+      },
+    });
+  }
+
+  // 11.c Historical Bar & Cafe Orders across the last 45 days
+  let barOrderSeq = 1;
+  for (let d = -45; d <= 0; d++) {
+    const orderDate = new Date(now);
+    orderDate.setDate(orderDate.getDate() + d);
+
+    // 2 orders per day
+    for (let o = 1; o <= 2; o++) {
+      orderDate.setHours(9 + o * 5 + (Math.abs(d) % 3), (o * 23) % 60, 0, 0);
+      const mIdx = (Math.abs(d * 3 + o)) % createdMembers.length;
+      const member = createdMembers[mIdx];
+      const isMember = (d + o) % 3 !== 0;
+
+      const mi1 = createdMenuItems[(Math.abs(d * 2 + o)) % createdMenuItems.length];
+      const mi2 = createdMenuItems[(Math.abs(d * 3 + o + 1)) % createdMenuItems.length];
+      const subtotal = mi1.pricePaise + mi2.pricePaise;
+      const discount = isMember ? Math.round(subtotal * 0.15) : 0;
+      const finalPrice = subtotal - discount;
+
+      const barOrderNumber = `BO-${now.getFullYear()}-${String(barOrderSeq++).padStart(5, "0")}`;
+      const bo = await prisma.barOrder.create({
+        data: {
+          orderNumber: barOrderNumber,
+          tableId: tables[(Math.abs(d + o)) % tables.length].id,
+          status: "SERVED",
+          notes: "Dining order completed",
+          createdAt: orderDate,
+        },
+      });
+
+      await prisma.barOrderItem.createMany({
+        data: [
+          {
+            barOrderId: bo.id,
+            menuItemId: mi1.id,
+            quantity: 1,
+            unitPricePaise: mi1.pricePaise,
+            totalPricePaise: mi1.pricePaise,
+          },
+          {
+            barOrderId: bo.id,
+            menuItemId: mi2.id,
+            quantity: 1,
+            unitPricePaise: mi2.pricePaise,
+            totalPricePaise: mi2.pricePaise,
+          },
+        ],
+      });
+
+      await prisma.ledgerTransaction.create({
+        data: {
+          entryNumber: `TX-BAR-${String(barOrderSeq).padStart(5, "0")}`,
+          date: orderDate,
+          description: `Club Dining & Lounge - ${mi1.name} & ${mi2.name} (${barOrderNumber})`,
+          module: "BAR",
+          creditPaise: finalPrice,
+          paymentMethod: "UPI",
+          taxAmountPaise: Math.round(finalPrice * 0.05),
+          referenceType: "TAB",
+          referenceId: bo.id,
+        },
+      });
+    }
   }
 
   // 12. CRM Leads & Pipeline
@@ -940,33 +1139,108 @@ async function main() {
       gstin: "29WILSN0000A1Z2",
     },
   });
-
-  await prisma.expense.createMany({
-    data: [
-      {
-        expenseNumber: "EXP-2024-00088",
-        vendorId: vendor1.id,
-        category: "UTILITIES",
-        description: "Monthly Floodlights & Clubhouse Electricity Bill",
-        amountPaise: 18500000, // ₹1,85,000
-        taxPaise: 3330000,
-        status: "PAID",
-        paymentMethod: "BANK_TRANSFER",
-        paymentDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-      },
-      {
-        expenseNumber: "EXP-2024-00089",
-        vendorId: vendor2.id,
-        category: "EQUIPMENT",
-        description: "Restock: 50x Wilson US Open Balls & Grips",
-        amountPaise: 12000000, // ₹1,20,000
-        taxPaise: 2160000,
-        status: "PAID",
-        paymentMethod: "BANK_TRANSFER",
-        paymentDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-      },
-    ],
+  const vendor3 = await prisma.vendor.create({
+    data: {
+      name: "Supreme Sports Infrastructure & Turf Care",
+      category: "MAINTENANCE",
+      contactPerson: "Ramesh",
+      phone: "+91 98444 55555",
+      gstin: "29SUPRM0000A1Z3",
+    },
   });
+  const vendor4 = await prisma.vendor.create({
+    data: {
+      name: "Fresh Farms & Organic Dairy Co",
+      category: "FOOD_BEVERAGE",
+      contactPerson: "Suresh",
+      phone: "+91 98555 66666",
+      gstin: "29FRESH0000A1Z4",
+    },
+  });
+  const vendor5 = await prisma.vendor.create({
+    data: {
+      name: "CleanWave Laundry & Hospitality Services",
+      category: "MAINTENANCE",
+      contactPerson: "Kavita",
+      phone: "+91 98666 77777",
+      gstin: "29CLEAN0000A1Z5",
+    },
+  });
+
+  const expensesData = [
+    {
+      expenseNumber: "EXP-2024-00088",
+      vendorId: vendor1.id,
+      category: "UTILITIES",
+      description: "Monthly Floodlights & Clubhouse Electricity Bill",
+      amountPaise: 18500000, // ₹1,85,000
+      taxPaise: 3330000,
+      status: "PAID",
+      paymentMethod: "BANK_TRANSFER",
+      paymentDate: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000), // 20 days ago (30d)
+    },
+    {
+      expenseNumber: "EXP-2024-00089",
+      vendorId: vendor2.id,
+      category: "EQUIPMENT",
+      description: "Restock: 50x Wilson US Open Balls & Grips",
+      amountPaise: 9500000, // ₹95,000
+      taxPaise: 1710000,
+      status: "PAID",
+      paymentMethod: "BANK_TRANSFER",
+      paymentDate: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000), // 12 days ago (30d)
+    },
+    {
+      expenseNumber: "EXP-2024-00090",
+      vendorId: vendor3.id,
+      category: "MAINTENANCE",
+      description: "Championship Clay Court Dressing & Net Maintenance",
+      amountPaise: 4500000, // ₹45,000
+      taxPaise: 810000,
+      status: "PAID",
+      paymentMethod: "BANK_TRANSFER",
+      paymentDate: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000), // 4 days ago (7d, 30d)
+    },
+    {
+      expenseNumber: "EXP-2024-00091",
+      vendorId: vendor4.id,
+      category: "FOOD_BEVERAGE",
+      description: "Weekly Cafe Organic Protein, Milk & Produce Restock",
+      amountPaise: 1800000, // ₹18,000
+      taxPaise: 90000,
+      status: "PAID",
+      paymentMethod: "BANK_TRANSFER",
+      paymentDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago (7d, 30d)
+    },
+    {
+      expenseNumber: "EXP-2024-00092",
+      vendorId: vendor5.id,
+      category: "MAINTENANCE",
+      description: "Daily Towel Laundry & Housekeeping Supplies",
+      amountPaise: 250000, // ₹2,500
+      taxPaise: 45000,
+      status: "PAID",
+      paymentMethod: "UPI",
+      paymentDate: new Date(), // Today (today, 7d, 30d)
+    },
+  ];
+
+  for (const exp of expensesData) {
+    const createdExp = await prisma.expense.create({ data: exp });
+    await prisma.ledgerTransaction.create({
+      data: {
+        entryNumber: `TX-${exp.expenseNumber}`,
+        date: exp.paymentDate,
+        description: `Operational Expense - ${exp.description} (${exp.expenseNumber})`,
+        module: "EXPENSES",
+        debitPaise: exp.amountPaise,
+        paymentMethod: exp.paymentMethod,
+        taxAmountPaise: exp.taxPaise,
+        referenceType: "EXPENSE",
+        referenceId: createdExp.id,
+      },
+    });
+  }
 
   // 14. Recurring Social Play Session (Friday Night Padel Social)
   const nextFriday = new Date();
