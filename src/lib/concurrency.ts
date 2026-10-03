@@ -209,7 +209,7 @@ export async function createCourtBookingAtomic(input: CreateBookingInput) {
           where: { id: input.memberId },
           include: {
             memberships: {
-              where: { status: "ACTIVE" },
+              where: { status: { in: ["ACTIVE", "EXPIRING_SOON"] } },
               include: { plan: true },
               orderBy: { endDate: "desc" },
             },
@@ -217,21 +217,32 @@ export async function createCourtBookingAtomic(input: CreateBookingInput) {
         });
 
         if (member) {
+          const todayStart = new Date();
+          todayStart.setHours(0, 0, 0, 0);
+
+          const validMemberships = member.memberships.filter(
+            (m) => new Date(m.endDate).getTime() >= todayStart.getTime()
+          );
+
           // Expired or suspended members lose member pricing and revert to WALK_IN
-          if (member.status === "ACTIVE" && member.memberships.length > 0) {
-            const activeMembership = member.memberships[0];
-            activeTier = activeMembership.plan.tier;
+          if (
+            (member.status === "ACTIVE" || member.status === "EXPIRING_SOON") &&
+            validMemberships.length > 0
+          ) {
+            const activeMembership = validMemberships[0];
+            activeTier = activeMembership.plan?.tier || activeMembership.tier || "FREE";
             bookerType = activeTier as any;
 
-            // Enforce plan advance booking days limit (e.g. Gold: 14 days, Silver: 7 days, Free: 3 days)
-            const advanceDays = activeMembership.plan.advanceBookingDays || (activeTier === "FREE" ? 3 : 14);
+            // Enforce plan advance booking days limit (e.g. Gold: 14 days, Silver: 7 days, Junior: 7 days, Free: 3 days)
+            const advanceDays =
+              activeMembership.plan?.advanceBookingDays || (activeTier === "FREE" ? 3 : 7);
             const maxAllowedDate = new Date();
             maxAllowedDate.setDate(maxAllowedDate.getDate() + advanceDays);
             maxAllowedDate.setHours(23, 59, 59, 999);
 
             if (start.getTime() > maxAllowedDate.getTime()) {
               throw new Error(
-                `Advance booking limit reached: Your ${activeMembership.plan.name} allows booking up to ${advanceDays} days in advance.`
+                `Advance booking limit reached: Your ${activeMembership.plan?.name || activeTier} allows booking up to ${advanceDays} days in advance.`
               );
             }
 

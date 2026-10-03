@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { formatINR, formatDate, formatDateTime } from "@/lib/formatters";
 import { useAuth } from "@/lib/auth-context";
+import { calculateCourtPrice, isPeakHour } from "@/lib/pricing";
 import {
   QrCode,
   Calendar,
@@ -1148,7 +1149,12 @@ export default function MemberPortalPage(props: any) {
           {/* Courts Grid with Full Hourly Slots */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {filteredCourts.map((court) => {
-              const courtHourlyRate = isGold ? 0 : Math.round(court.hourlyRatePaise / 2);
+              const effectiveTier = plan?.tier || "WALK_IN";
+              const samplePricing = calculateCourtPrice({
+                tier: effectiveTier,
+                isPeak: false,
+                baseHourlyRatePaise: court.hourlyRatePaise,
+              });
               const slotsToDisplay = getFilteredSlots();
 
               return (
@@ -1174,7 +1180,11 @@ export default function MemberPortalPage(props: any) {
 
                     <div className="text-right">
                       <span className="text-xs font-serif font-bold text-[#921111] dark:text-[#DFCA9B] block">
-                        {isGold ? "Complimentary (Gold)" : formatINR(courtHourlyRate) + " / hr"}
+                        {isGold
+                          ? "Complimentary (Gold)"
+                          : samplePricing.discountPercent > 0
+                          ? `${formatINR(samplePricing.finalPricePaise)} / hr (${samplePricing.discountPercent}% Off)`
+                          : `${formatINR(court.hourlyRatePaise)} / hr`}
                       </span>
                       <span className="text-[10px] text-[#8C6D23] dark:text-[#DFCA9B] uppercase font-bold tracking-wider">60 Min Sessions</span>
                     </div>
@@ -1886,28 +1896,58 @@ export default function MemberPortalPage(props: any) {
               </div>
             </div>
 
-            <div className="p-4 rounded-md bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] space-y-2.5 text-xs">
-              <div className="flex justify-between items-center">
-                <span className="text-[#6B7280] dark:text-[#9CA3AF]">Selected Date:</span>
-                <strong className="font-serif font-bold text-[#0B1320] dark:text-white">{formatDate(bookingDate)}</strong>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[#6B7280] dark:text-[#9CA3AF]">Slot Time:</span>
-                <strong className="font-mono font-bold text-[#921111] dark:text-[#DFCA9B] text-sm">
-                  {confirmSlotModal.time} (60 Mins)
-                </strong>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[#6B7280] dark:text-[#9CA3AF]">Member Name:</span>
-                <span className="font-serif font-bold text-[#0B1320] dark:text-white">{member?.name || currentUser?.name}</span>
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t border-[#E5DFD5] dark:border-[#222D3E]">
-                <span className="text-[#6B7280] dark:text-[#9CA3AF]">Pricing Tariff:</span>
-                <span className="font-serif font-bold text-sm text-[#921111] dark:text-[#DFCA9B]">
-                  {isGold ? "Complimentary (Gold Privilege)" : formatINR(Math.round(confirmSlotModal.court.hourlyRatePaise / 2))}
-                </span>
-              </div>
-            </div>
+            {(() => {
+              const modalSlotStart = new Date(`${bookingDate}T${confirmSlotModal.time}:00`);
+              const modalIsPeak = isPeakHour(modalSlotStart);
+              const modalPricing = calculateCourtPrice({
+                tier: plan?.tier || "WALK_IN",
+                isPeak: modalIsPeak,
+                baseHourlyRatePaise: confirmSlotModal.court.hourlyRatePaise,
+              });
+
+              return (
+                <div className="p-4 rounded-md bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] space-y-2.5 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#6B7280] dark:text-[#9CA3AF]">Selected Date:</span>
+                    <strong className="font-serif font-bold text-[#0B1320] dark:text-white">{formatDate(bookingDate)}</strong>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#6B7280] dark:text-[#9CA3AF]">Slot Time:</span>
+                    <strong className="font-mono font-bold text-[#921111] dark:text-[#DFCA9B] text-sm">
+                      {confirmSlotModal.time} (60 Mins) {modalIsPeak ? "🔥 Peak" : "🌿 Off-Peak"}
+                    </strong>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#6B7280] dark:text-[#9CA3AF]">Member Name:</span>
+                    <span className="font-serif font-bold text-[#0B1320] dark:text-white">{member?.name || currentUser?.name} ({plan?.name || "Community Plan"})</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#6B7280] dark:text-[#9CA3AF]">Standard Rate:</span>
+                    <span className="font-mono text-[#4B5563] dark:text-[#9CA3AF]">{formatINR(confirmSlotModal.court.hourlyRatePaise)}/hr</span>
+                  </div>
+                  {modalPricing.discountPercent > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-[#8C6D23] dark:text-[#DFCA9B] font-bold">Tier Privilege ({plan?.tier}):</span>
+                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                        -{modalPricing.discountPercent}% Off (-{formatINR(modalPricing.discountPaise)})
+                      </span>
+                    </div>
+                  )}
+                  {modalPricing.peakSurchargePaise > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-[#8C6D23] dark:text-[#DFCA9B]">Peak Surcharge:</span>
+                      <span className="font-mono font-bold text-amber-600 dark:text-amber-400">+{formatINR(modalPricing.peakSurchargePaise)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center pt-2 border-t border-[#E5DFD5] dark:border-[#222D3E]">
+                    <span className="text-[#6B7280] dark:text-[#9CA3AF] font-bold">Pricing Tariff:</span>
+                    <span className="font-serif font-bold text-sm text-[#921111] dark:text-[#DFCA9B]">
+                      {modalPricing.finalPricePaise === 0 ? "Complimentary (Gold Privilege)" : formatINR(modalPricing.finalPricePaise)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
 
             {parseInt(confirmSlotModal.time.split(":")[0]) >= 18 && (
               <div className="p-3 rounded-md bg-[#C5A059]/15 border border-[#C5A059]/30 text-[11px] text-[#8C6D23] dark:text-[#DFCA9B] flex items-center gap-2">
@@ -2230,7 +2270,7 @@ export default function MemberPortalPage(props: any) {
                       name: "Junior Academy Tier (Under 18)",
                       monthlyPaise: 150000,
                       annualPaise: 1500000,
-                      perks: "60% Off Off-Peak Courts • Academy Discounts • 15% Dining Discount",
+                      perks: "60% Off Off-Peak Courts • Dedicated Contact to Coaches • 15% Dining Discount",
                       badge: "Youth",
                     },
                   ].map((t) => {

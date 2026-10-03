@@ -101,7 +101,6 @@ async function main() {
         "14-Day Advance Booking Window",
         "20% Discount on Bar & Cafeteria",
         "15% Discount at Pro Shop",
-        "Complimentary Guest Passes (2/month)",
         "Dedicated Locker & Towel Service",
       ]),
     },
@@ -143,7 +142,7 @@ async function main() {
       description: "Exclusive subsidized tier for budding athletes under 18 years.",
       featuresJson: JSON.stringify([
         "60% Off Off-Peak Court Bookings",
-        "Academy Coaching Discounts",
+        "Dedicated Contact to Coaches",
         "15% Discount on Healthy Juices & Snacks",
         "Junior League Entry",
       ]),

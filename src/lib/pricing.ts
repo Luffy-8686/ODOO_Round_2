@@ -1,5 +1,5 @@
 export interface PriceCalculationParams {
-  tier: "GOLD" | "SILVER" | "JUNIOR" | "WALK_IN" | "TRIAL";
+  tier: "GOLD" | "SILVER" | "JUNIOR" | "FREE" | "WALK_IN" | "TRIAL" | string;
   isPeak: boolean;
   baseHourlyRatePaise: number; // e.g. 80000 for ₹800
   durationMinutes?: number; // default 60
@@ -35,10 +35,10 @@ export function isPeakHour(date: Date): boolean {
 
 /**
  * Core Pricing Matrix:
- * - GOLD: 100% free court access during off-peak, ₹0 or minimal nominal surcharge (₹0 default) during peak.
+ * - GOLD: 100% free court access during off-peak and peak.
  * - SILVER: 50% discount on off-peak, 25% discount on peak.
  * - JUNIOR: 60% discount on off-peak, 40% discount on peak (under 18).
- * - WALK_IN / GUEST: Full base rate (+ 20% surcharge during peak).
+ * - FREE / WALK_IN / GUEST: Full base rate (+ 20% surcharge during peak).
  * - TRIAL: 100% free single trial session.
  */
 export function calculateCourtPrice(params: PriceCalculationParams): PriceBreakdown {
@@ -50,17 +50,15 @@ export function calculateCourtPrice(params: PriceCalculationParams): PriceBreakd
   let finalPricePaise = baseRate;
   let explanation = "";
 
-  switch (params.tier) {
+  const tierKey = (params.tier || "WALK_IN").toUpperCase();
+
+  switch (tierKey) {
     case "GOLD":
-      if (params.isPeak) {
-        discountPercent = 100;
-        finalPricePaise = 0;
-        explanation = "Gold Member: 100% free peak court access";
-      } else {
-        discountPercent = 100;
-        finalPricePaise = 0;
-        explanation = "Gold Member: 100% free off-peak court access";
-      }
+      discountPercent = 100;
+      finalPricePaise = 0;
+      explanation = params.isPeak
+        ? "Gold Member: 100% free peak court access"
+        : "Gold Member: 100% free off-peak court access";
       break;
 
     case "SILVER":
@@ -87,6 +85,17 @@ export function calculateCourtPrice(params: PriceCalculationParams): PriceBreakd
       }
       break;
 
+    case "FREE":
+      if (params.isPeak) {
+        peakSurchargePaise = Math.round(baseRate * 0.2); // 20% peak surge
+        finalPricePaise = baseRate + peakSurchargePaise;
+        explanation = "Community Member: Standard rate + 20% peak surcharge";
+      } else {
+        finalPricePaise = baseRate;
+        explanation = "Community Member: Standard off-peak rate";
+      }
+      break;
+
     case "TRIAL":
       discountPercent = 100;
       finalPricePaise = 0;
@@ -109,7 +118,7 @@ export function calculateCourtPrice(params: PriceCalculationParams): PriceBreakd
   const discountPaise = baseRate - (finalPricePaise - peakSurchargePaise);
 
   return {
-    tier: params.tier,
+    tier: tierKey,
     isPeak: params.isPeak,
     baseRatePaise: baseRate,
     discountPercent,
