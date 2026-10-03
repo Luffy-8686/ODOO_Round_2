@@ -55,4 +55,89 @@ describe("Hard Concurrency Invariant — Simultaneous Slot Collision Test", () =
       }
     }
   });
+
+  describe("TTL Slot Hold Engine (300-Second Movie-Theater Locking)", () => {
+    it("Acquires a 300-second exclusive hold and blocks conflicting hold requests from other users", async () => {
+      const { holdCourtSlot, releaseCourtSlotHold, getActiveHolds } = await import("../src/lib/concurrency");
+      const targetSlot = new Date(Date.now() + 400 * 24 * 60 * 60 * 1000);
+      targetSlot.setHours(19, 0, 0, 0);
+
+      const testUser = await prisma.user.findFirst();
+
+      // User 1 acquires hold
+      const hold1 = await holdCourtSlot({
+        courtId: court.id,
+        startTime: targetSlot,
+        durationMinutes: 60,
+        userId: testUser?.id || "user-111",
+        holderName: "Customer One",
+      });
+
+      expect(hold1.id).toBeDefined();
+      expect(hold1.ttlSeconds).toBe(300);
+      expect(hold1.expiresAt).toBeGreaterThan(Date.now());
+
+      // User 2 attempts to hold same slot -> must be rejected
+      await expect(
+        holdCourtSlot({
+          courtId: court.id,
+          startTime: targetSlot,
+          durationMinutes: 60,
+          userId: "different-user-id",
+          holderName: "Customer Two",
+        })
+      ).rejects.toThrow(/Slot is currently locked by another customer/);
+
+      // User 1 confirms booking using holdId
+      const booking = await createCourtBookingAtomic({
+        courtId: court.id,
+        bookerName: "Customer One",
+        bookerPhone: "+91 99999 22222",
+        bookerEmail: "c1@collisiontest.com",
+        startTime: targetSlot,
+        durationMinutes: 60,
+        holdId: hold1.id,
+        userId: testUser?.id,
+      });
+
+      expect(booking.id).toBeDefined();
+      expect(booking.bookingNumber).toBeDefined();
+
+      // Ensure hold was consumed/pruned
+      const activeHolds = getActiveHolds();
+      expect(activeHolds.some((h) => h.id === hold1.id)).toBe(false);
+    });
+
+    it("Releasing a TTL hold frees the slot for another customer immediately", async () => {
+      const { holdCourtSlot, releaseCourtSlotHold } = await import("../src/lib/concurrency");
+      const targetSlot = new Date(Date.now() + 401 * 24 * 60 * 60 * 1000);
+      targetSlot.setHours(20, 0, 0, 0);
+
+      const hold = await holdCourtSlot({
+        courtId: court.id,
+        startTime: targetSlot,
+        durationMinutes: 60,
+        userId: "user-alpha",
+        holderName: "User Alpha",
+      });
+
+      expect(hold.id).toBeDefined();
+
+      // Release hold
+      const released = releaseCourtSlotHold(hold.id, "user-alpha");
+      expect(released).toBe(true);
+
+      // User Beta can now hold the slot
+      const holdBeta = await holdCourtSlot({
+        courtId: court.id,
+        startTime: targetSlot,
+        durationMinutes: 60,
+        userId: "user-beta",
+        holderName: "User Beta",
+      });
+
+      expect(holdBeta.id).toBeDefined();
+      releaseCourtSlotHold(holdBeta.id);
+    });
+  });
 });

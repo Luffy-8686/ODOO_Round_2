@@ -75,6 +75,10 @@ export default function MemberPortalPage(props: any) {
   const [loading, setLoading] = useState(true);
 
   // Portal booking state
+  const [dayHolds, setDayHolds] = useState<any[]>([]);
+  const [activeHold, setActiveHold] = useState<any>(null);
+  const [holdSecondsRemaining, setHoldSecondsRemaining] = useState<number>(300);
+  const [modalError, setModalError] = useState<string | null>(null);
   const [bookingSuccess, setBookingSuccess] = useState<any>(null);
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [selectedBookingModal, setSelectedBookingModal] = useState<any>(null);
@@ -160,6 +164,7 @@ export default function MemberPortalPage(props: any) {
       if (memData.member) setMember(memData.member);
       if (crtData.courts) setCourts(crtData.courts);
       if (crtData.bookings) setDayBookings(crtData.bookings);
+      if (crtData.holds) setDayHolds(crtData.holds);
       if (prdData.products) setProducts(prdData.products);
       if (menuData.items) setMenuItems(menuData.items);
       if (tblData.tables) {
@@ -186,10 +191,81 @@ export default function MemberPortalPage(props: any) {
     }
   }, [initialTab]);
 
+  // 300s TTL Countdown Timer for Hold
+  useEffect(() => {
+    if (!confirmSlotModal || !activeHold) return;
+
+    const interval = setInterval(() => {
+      const remaining = Math.max(0, Math.ceil((activeHold.expiresAt - Date.now()) / 1000));
+      setHoldSecondsRemaining(remaining);
+      if (remaining <= 0) {
+        setModalError("⏱️ Checkout Hold Expired: The 300-second exclusive slot lock has expired. Please close this popup and select the slot again.");
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [confirmSlotModal, activeHold]);
+
+  const handleOpenSlotModal = async (court: any, time: string) => {
+    setModalError(null);
+    setBookingError(null);
+    const slotStart = new Date(`${bookingDate}T${time}:00`);
+
+    try {
+      // 1. Acquire 300-second exclusive TTL hold
+      const res = await fetch("/api/bookings/hold", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          courtId: court.id,
+          startTime: slotStart.toISOString(),
+          durationMinutes: 60,
+          userId: currentUser?.id,
+          memberId: member?.id,
+          holderName: member?.name || currentUser?.name || "Member",
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setBookingError(data.error || "Slot is currently locked by another customer in checkout.");
+        await fetchMemberData();
+        return;
+      }
+
+      setActiveHold(data.hold);
+      setHoldSecondsRemaining(300);
+      setConfirmSlotModal({ court, time });
+    } catch (err: any) {
+      setBookingError(err.message || "Failed to reserve slot hold.");
+    }
+  };
+
+  const handleCloseConfirmModal = async () => {
+    if (activeHold?.id) {
+      try {
+        await fetch(`/api/bookings/hold?holdId=${activeHold.id}`, { method: "DELETE" });
+      } catch (e) {
+        // silent
+      }
+    }
+    setActiveHold(null);
+    setConfirmSlotModal(null);
+    setModalError(null);
+    await fetchMemberData();
+  };
+
   const handlePortalBooking = async (court: any, time: string) => {
+    setModalError(null);
     setBookingError(null);
     setBookingSuccess(null);
     setIsBookingSubmitting(true);
+
+    if (holdSecondsRemaining <= 0) {
+      setModalError("Hold has expired. Please close and re-select slot.");
+      setIsBookingSubmitting(false);
+      return;
+    }
 
     const slotStart = new Date(`${bookingDate}T${time}:00`);
 
@@ -208,19 +284,24 @@ export default function MemberPortalPage(props: any) {
           source: "MEMBER_PORTAL",
           userId: currentUser?.id,
           userName: currentUser?.name,
+          holdId: activeHold?.id,
         }),
       });
 
       const data = await res.json();
       if (!res.ok || data.error) {
+        // Render error prominently inside modal
+        setModalError(data.error || "Booking failed");
         setBookingError(data.error || "Booking failed");
       } else {
         setBookingSuccess(data.booking);
         setConfirmSlotModal(null);
+        setActiveHold(null);
         await fetchMemberData();
       }
     } catch (err: any) {
-      setBookingError(err.message);
+      setModalError(err.message || "Network error occurred.");
+      setBookingError(err.message || "Network error occurred.");
     } finally {
       setIsBookingSubmitting(false);
     }
@@ -261,6 +342,24 @@ export default function MemberPortalPage(props: any) {
       const bStart = new Date(b.startTime);
       const bEnd = new Date(b.endTime);
       return slotStart >= bStart && slotStart < bEnd;
+    });
+  };
+
+  // Helper to check if a slot is currently held by another customer (300s TTL)
+  const isSlotHeld = (courtId: string, timeStr: string) => {
+    const slotStart = new Date(`${bookingDate}T${timeStr}:00`);
+    const slotEnd = new Date(slotStart.getTime() + 60 * 60000);
+    const now = Date.now();
+    return dayHolds.some((h: any) => {
+      if (h.courtId !== courtId) return false;
+      const hStart = new Date(h.startTime).getTime();
+      const hEnd = new Date(h.endTime).getTime();
+      const isHeld = hStart < slotEnd.getTime() && hEnd > slotStart.getTime() && h.expiresAt > now;
+      const isMine =
+        (currentUser?.id && h.userId === currentUser.id) ||
+        (member?.id && h.memberId === member.id) ||
+        (activeHold?.id && h.id === activeHold.id);
+      return isHeld && !isMine;
     });
   };
 
@@ -1195,13 +1294,14 @@ export default function MemberPortalPage(props: any) {
                     <div className="flex items-center justify-between pb-2 text-[10px] font-bold text-[#8C6D23] dark:text-[#DFCA9B] uppercase tracking-wider">
                       <span>Available 60-Minute Slots:</span>
                       <span className="font-mono text-[#6B7280] dark:text-[#9CA3AF]">
-                        {slotsToDisplay.filter((t) => !isSlotBooked(court.id, t) && !isSlotPast(t)).length} open slots
+                        {slotsToDisplay.filter((t) => !isSlotBooked(court.id, t) && !isSlotHeld(court.id, t) && !isSlotPast(t)).length} open slots
                       </span>
                     </div>
 
                     <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
                       {slotsToDisplay.map((t) => {
                         const booked = isSlotBooked(court.id, t);
+                        const held = isSlotHeld(court.id, t);
                         const past = isSlotPast(t);
                         const isEvening = parseInt(t.split(":")[0]) >= 18;
 
@@ -1214,6 +1314,19 @@ export default function MemberPortalPage(props: any) {
                             >
                               <span>{t}</span>
                               <span className="block text-[8px] uppercase tracking-tighter opacity-80">Booked</span>
+                            </div>
+                          );
+                        }
+
+                        if (held) {
+                          return (
+                            <div
+                              key={t}
+                              className="py-1.5 px-1 rounded-md bg-amber-50/80 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/60 text-amber-700 dark:text-amber-300 text-center text-[10px] font-mono font-bold cursor-not-allowed select-none"
+                              title="Slot is temporarily held in another user's checkout (300s lock)"
+                            >
+                              <span>{t}</span>
+                              <span className="block text-[8px] uppercase tracking-tighter text-amber-600 dark:text-amber-400 font-sans font-bold">Held ⏳</span>
                             </div>
                           );
                         }
@@ -1234,7 +1347,7 @@ export default function MemberPortalPage(props: any) {
                         return (
                           <button
                             key={t}
-                            onClick={() => setConfirmSlotModal({ court, time: t })}
+                            onClick={() => handleOpenSlotModal(court, t)}
                             className={`py-1.5 px-1 rounded-md font-bold text-[11px] font-mono transition-all text-center border relative group ${
                               isEvening
                                 ? "bg-white dark:bg-[#0E1522] hover:bg-[#921111] hover:text-white border-[#C5A059]/60 text-[#0B1320] dark:text-white hover:border-[#921111]"
@@ -1896,6 +2009,46 @@ export default function MemberPortalPage(props: any) {
               </div>
             </div>
 
+            {/* Live 300-Second TTL Slot Lock Banner */}
+            <div className="p-3 rounded-lg bg-[#FAF8F5] dark:bg-[#121A28] border border-[#C5A059]/40 flex items-center justify-between shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <Clock className="w-4 h-4 text-[#921111] dark:text-[#DFCA9B] animate-pulse shrink-0" />
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C6D23] dark:text-[#DFCA9B] block">
+                    Exclusive Slot Hold (TTL)
+                  </span>
+                  <span className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF]">
+                    Temporary 5-min checkout lock reserved for you
+                  </span>
+                </div>
+              </div>
+              <div className="text-right">
+                <span
+                  className={`font-mono font-bold text-sm px-2.5 py-1 rounded border shadow-inner ${
+                    holdSecondsRemaining <= 30
+                      ? "bg-red-50 dark:bg-red-950/60 text-red-600 border-red-300 dark:border-red-800 animate-bounce"
+                      : "bg-white dark:bg-[#0E1522] text-[#921111] dark:text-[#DFCA9B] border-[#C5A059]/40"
+                  }`}
+                >
+                  {String(Math.floor(holdSecondsRemaining / 60)).padStart(2, "0")}:
+                  {String(holdSecondsRemaining % 60).padStart(2, "0")}
+                </span>
+              </div>
+            </div>
+
+            {/* In-Modal Booking Error Alert (Always in front of modal) */}
+            {modalError && (
+              <div className="p-3.5 rounded-lg bg-red-50 dark:bg-red-950/80 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-start gap-2.5 shadow-sm animate-in fade-in slide-in-from-top-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-600 dark:text-red-400 mt-0.5" />
+                <div className="space-y-0.5">
+                  <span className="font-bold block text-red-800 dark:text-red-200 uppercase tracking-wide text-[10px]">
+                    Booking Error / Notice
+                  </span>
+                  <span className="text-[11px] leading-relaxed block">{modalError}</span>
+                </div>
+              </div>
+            )}
+
             {(() => {
               const modalSlotStart = new Date(`${bookingDate}T${confirmSlotModal.time}:00`);
               const modalIsPeak = isPeakHour(modalSlotStart);
@@ -1959,14 +2112,14 @@ export default function MemberPortalPage(props: any) {
             <div className="flex items-center gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setConfirmSlotModal(null)}
+                onClick={handleCloseConfirmModal}
                 className="flex-1 py-2.5 rounded-md bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] hover:bg-[#FAF8F5]/80 text-[#4B5563] dark:text-[#9CA3AF] font-bold text-xs uppercase tracking-wider transition-colors"
               >
-                Cancel
+                Cancel & Release
               </button>
               <button
                 type="button"
-                disabled={isBookingSubmitting}
+                disabled={isBookingSubmitting || holdSecondsRemaining <= 0}
                 onClick={() => handlePortalBooking(confirmSlotModal.court, confirmSlotModal.time)}
                 className="flex-1 py-2.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
               >
@@ -1975,7 +2128,13 @@ export default function MemberPortalPage(props: any) {
                 ) : (
                   <Check className="w-4 h-4" />
                 )}
-                <span>{isBookingSubmitting ? "Locking Slot..." : "Confirm & Book"}</span>
+                <span>
+                  {isBookingSubmitting
+                    ? "Locking Slot..."
+                    : holdSecondsRemaining <= 0
+                    ? "Hold Expired"
+                    : "Confirm & Book"}
+                </span>
               </button>
             </div>
           </div>

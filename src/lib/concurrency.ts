@@ -9,7 +9,7 @@ export interface CreateBookingInput {
   bookerName: string;
   bookerPhone: string;
   bookerEmail: string;
-  bookerType?: "GOLD" | "SILVER" | "JUNIOR" | "WALK_IN" | "TRIAL";
+  bookerType?: "GOLD" | "SILVER" | "JUNIOR" | "WALK_IN" | "TRIAL" | string;
   startTime: Date | string;
   durationMinutes?: number; // default 60
   source?: "FRONT_DESK" | "MEMBER_PORTAL" | "PUBLIC_TRIAL" | "PHONE";
@@ -18,6 +18,130 @@ export interface CreateBookingInput {
   coachId?: string | null;
   userId?: string | null;
   userName?: string;
+  holdId?: string | null;
+}
+
+export interface SlotHold {
+  id: string;
+  courtId: string;
+  startTime: string; // ISO string
+  endTime: string;   // ISO string
+  userId?: string | null;
+  memberId?: string | null;
+  holderName: string;
+  createdAt: number;
+  expiresAt: number;
+  ttlSeconds: number;
+}
+
+const slotHoldsMap = new Map<string, SlotHold>();
+export const HOLD_TTL_MS = 300 * 1000; // 300 seconds (5 minutes)
+
+export function pruneExpiredSlotHolds() {
+  const now = Date.now();
+  for (const [id, hold] of slotHoldsMap.entries()) {
+    if (hold.expiresAt <= now) {
+      slotHoldsMap.delete(id);
+    }
+  }
+}
+
+export function getActiveHolds(dateStr?: string): SlotHold[] {
+  pruneExpiredSlotHolds();
+  const allHolds = Array.from(slotHoldsMap.values());
+  if (!dateStr) return allHolds;
+
+  return allHolds.filter((h) => h.startTime.startsWith(dateStr));
+}
+
+/**
+ * Acquire a 300-second exclusive TTL hold on a court slot for checkout (movie-theater seat locking pattern)
+ */
+export async function holdCourtSlot(input: {
+  courtId: string;
+  startTime: Date | string;
+  durationMinutes?: number;
+  userId?: string | null;
+  memberId?: string | null;
+  holderName: string;
+}): Promise<SlotHold> {
+  pruneExpiredSlotHolds();
+  const start = new Date(input.startTime);
+  const duration = input.durationMinutes || 60;
+  const end = new Date(start.getTime() + duration * 60000);
+
+  const now = new Date();
+  if (start.getTime() < now.getTime() - 5 * 60 * 1000) {
+    throw new Error("Cannot reserve court slots in the past.");
+  }
+
+  // 1. Check permanent database bookings and maintenance
+  const availability = await checkCourtAvailability(input.courtId, start, end);
+  if (!availability.available) {
+    throw new Error(`Double-booking prevented: ${availability.reason}`);
+  }
+
+  // 2. Check existing active TTL holds on this court
+  const existingHold = Array.from(slotHoldsMap.values()).find((h) => {
+    if (h.courtId !== input.courtId) return false;
+    const hStart = new Date(h.startTime).getTime();
+    const hEnd = new Date(h.endTime).getTime();
+    const overlaps = hStart < end.getTime() && hEnd > start.getTime();
+    return overlaps && h.expiresAt > Date.now();
+  });
+
+  if (existingHold) {
+    const isSameHolder =
+      (input.userId && existingHold.userId === input.userId) ||
+      (input.memberId && existingHold.memberId === input.memberId);
+
+    if (isSameHolder) {
+      // Refresh TTL to 300 seconds
+      existingHold.expiresAt = Date.now() + HOLD_TTL_MS;
+      return existingHold;
+    } else {
+      const secondsLeft = Math.max(1, Math.ceil((existingHold.expiresAt - Date.now()) / 1000));
+      throw new Error(
+        `Slot is currently locked by another customer in checkout (Hold expires in ${secondsLeft}s). Please select another slot or try again shortly.`
+      );
+    }
+  }
+
+  const holdId = `HOLD-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`.toUpperCase();
+  const newHold: SlotHold = {
+    id: holdId,
+    courtId: input.courtId,
+    startTime: start.toISOString(),
+    endTime: end.toISOString(),
+    userId: input.userId,
+    memberId: input.memberId,
+    holderName: input.holderName,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + HOLD_TTL_MS,
+    ttlSeconds: 300,
+  };
+
+  slotHoldsMap.set(holdId, newHold);
+  return newHold;
+}
+
+/**
+ * Explicitly release a TTL hold when user cancels or navigates away
+ */
+export function releaseCourtSlotHold(holdId: string, holderIdentifier?: string) {
+  if (slotHoldsMap.has(holdId)) {
+    const hold = slotHoldsMap.get(holdId)!;
+    if (
+      !holderIdentifier ||
+      hold.userId === holderIdentifier ||
+      hold.memberId === holderIdentifier ||
+      hold.id === holdId
+    ) {
+      slotHoldsMap.delete(holdId);
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -259,7 +383,30 @@ export async function createCourtBookingAtomic(input: CreateBookingInput) {
         }
       }
 
-      // 4. HARD OVERLAP CHECK (Invariant inside transaction)
+      // 4. HARD OVERLAP & TTL HOLD CHECK (Invariant inside transaction)
+      pruneExpiredSlotHolds();
+      const activeHold = Array.from(slotHoldsMap.values()).find((h) => {
+        if (h.courtId !== input.courtId) return false;
+        const hStart = new Date(h.startTime).getTime();
+        const hEnd = new Date(h.endTime).getTime();
+        const overlaps = hStart < end.getTime() && hEnd > start.getTime();
+        return overlaps && h.expiresAt > Date.now();
+      });
+
+      if (activeHold) {
+        const isOwner =
+          (input.holdId && activeHold.id === input.holdId) ||
+          (input.userId && activeHold.userId === input.userId) ||
+          (input.memberId && activeHold.memberId === input.memberId);
+
+        if (!isOwner) {
+          const secondsLeft = Math.max(1, Math.ceil((activeHold.expiresAt - Date.now()) / 1000));
+          throw new Error(
+            `Slot is currently locked by another customer in checkout (Hold expires in ${secondsLeft}s). Double-booking prevented.`
+          );
+        }
+      }
+
       const availability = await checkCourtAvailability(input.courtId, start, end, undefined, tx);
       if (!availability.available) {
         throw new Error(`Double-booking prevented: ${availability.reason}`);
@@ -359,6 +506,13 @@ export async function createCourtBookingAtomic(input: CreateBookingInput) {
         channel: "IN_APP",
         tx,
       });
+
+      // Clear TTL hold on success
+      if (input.holdId) {
+        releaseCourtSlotHold(input.holdId);
+      } else if (activeHold) {
+        releaseCourtSlotHold(activeHold.id);
+      }
 
       return booking;
     },
