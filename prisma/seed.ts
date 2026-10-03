@@ -403,6 +403,26 @@ async function main() {
       daysRemaining: 5, // 5 days left
     },
     {
+      name: "Kabir Mehta",
+      email: "kabir.expiring@gmail.com",
+      phone: "+91 98111 00099",
+      tier: "GOLD",
+      planId: goldPlan.id,
+      status: "ACTIVE",
+      dob: new Date("1991-07-22"),
+      daysRemaining: 3, // 3 days left (Triggers Expiry Warning Banner)
+    },
+    {
+      name: "Tara Sharma",
+      email: "tara.expiring@gmail.com",
+      phone: "+91 98111 00098",
+      tier: "SILVER",
+      planId: silverPlan.id,
+      status: "ACTIVE",
+      dob: new Date("1994-03-11"),
+      daysRemaining: 1, // 1 day left (Urgent Expiry Alert)
+    },
+    {
       name: "Sneha Rao",
       email: "sneha.silver@gmail.com",
       phone: "+91 98111 00005",

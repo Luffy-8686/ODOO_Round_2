@@ -94,6 +94,30 @@ const DEMO_PERSONAS = [
     badgeColor: "bg-teal-100 text-teal-800 border-teal-300 dark:bg-teal-950 dark:text-teal-300",
     icon: "🧒",
   },
+  {
+    role: "MEMBER" as Role,
+    name: "Kabir Mehta",
+    email: "kabir.expiring@gmail.com",
+    title: "Gold Tier (Expires in 3 Days ⚠️)",
+    badgeColor: "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300",
+    icon: "⚠️",
+  },
+  {
+    role: "MEMBER" as Role,
+    name: "Tara Sharma",
+    email: "tara.expiring@gmail.com",
+    title: "Silver Tier (Expires Tomorrow ⏳)",
+    badgeColor: "bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-950 dark:text-orange-300",
+    icon: "⏳",
+  },
+  {
+    role: "MEMBER" as Role,
+    name: "Sneha Rao",
+    email: "sneha.silver@gmail.com",
+    title: "Silver Tier (Expired Member 🚨)",
+    badgeColor: "bg-red-100 text-red-800 border-red-300 dark:bg-red-950 dark:text-red-300",
+    icon: "🚨",
+  },
 ];
 
 function LoginFormContent() {

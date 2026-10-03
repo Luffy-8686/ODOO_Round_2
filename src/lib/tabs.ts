@@ -191,10 +191,10 @@ export async function settleTabAtomic(input: SettleTabInput) {
       }
 
       // Ledger entry for total bill
-      const txCount = await tx.ledgerTransaction.count();
+      const randSuffix = Math.floor(1000 + Math.random() * 9000);
       await tx.ledgerTransaction.create({
         data: {
-          entryNumber: `TX-${new Date().getFullYear()}-${String(txCount + 1).padStart(6, "0")}`,
+          entryNumber: `TX-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}${randSuffix}`,
           description: `Bar Tab Settlement #${tab.tabNumber} (${tab.guestName || tab.member?.name || 'Walk-in'})`,
           module: "BAR",
           creditPaise: totalPaidPaise,

@@ -142,10 +142,10 @@ export async function executeShopSaleAtomic(input: CreateSaleInput) {
           },
         });
 
-        const txCount = await tx.ledgerTransaction.count();
+        const randSuffix = Math.floor(1000 + Math.random() * 9000);
         await tx.ledgerTransaction.create({
           data: {
-            entryNumber: `TX-${new Date().getFullYear()}-${String(txCount + 1).padStart(6, "0")}`,
+            entryNumber: `TX-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}${randSuffix}`,
             description: `Gear Shop Sale #${shopOrder.orderNumber} - ${shopOrder.customerName}`,
             module: "SHOP",
             creditPaise: finalPricePaise,

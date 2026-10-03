@@ -108,6 +108,8 @@ export default function MemberPortalPage(props: any) {
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [upgradeSuccess, setUpgradeSuccess] = useState<any>(null);
   const [upgradeError, setUpgradeError] = useState<string | null>(null);
+  const [showExpiryPopup, setShowExpiryPopup] = useState(false);
+  const [hasDismissedExpiry, setHasDismissedExpiry] = useState(false);
 
   const handleUpgradeMembership = async () => {
     if (!member) return;
@@ -324,6 +326,12 @@ export default function MemberPortalPage(props: any) {
     : null;
   const isExpiringSoon = daysUntilExpiry !== null && daysUntilExpiry <= 5 && daysUntilExpiry >= 0;
   const isExpired = daysUntilExpiry !== null && daysUntilExpiry < 0;
+
+  useEffect(() => {
+    if ((isExpiringSoon || isExpired) && !hasDismissedExpiry) {
+      setShowExpiryPopup(true);
+    }
+  }, [isExpiringSoon, isExpired, hasDismissedExpiry]);
 
   // Advance booking window clamp
   const advanceDays = plan?.advanceBookingDays || (isFree ? 3 : 14);
@@ -2320,6 +2328,82 @@ export default function MemberPortalPage(props: any) {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* 5-DAY EXPIRY INTERACTIVE POPUP DIALOG */}
+      {showExpiryPopup && (
+        <div className="fixed inset-0 z-50 bg-[#0B1320]/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0E1522] rounded-xl max-w-lg w-full border-2 border-[#C5A059] p-6 sm:p-7 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95">
+            <button
+              onClick={() => {
+                setShowExpiryPopup(false);
+                setHasDismissedExpiry(true);
+              }}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-[#FAF8F5] dark:hover:bg-[#121A28] text-[#6B7280] hover:text-[#0B1320] dark:hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3.5 pb-3 border-b border-[#E5DFD5] dark:border-[#222D3E]">
+              <div className="w-12 h-12 rounded-lg bg-[#FAF7EE] dark:bg-[#1C1608] border border-[#DFCA9B] text-[#8C6D23] dark:text-[#DFCA9B] flex items-center justify-center text-2xl shadow-sm shrink-0">
+                {isExpired ? "🚨" : "⚠️"}
+              </div>
+              <div>
+                <span className="text-[9px] font-mono font-bold uppercase tracking-[0.2em] text-[#8C6D23] dark:text-[#DFCA9B] block">
+                  Clubhouse Dispatch
+                </span>
+                <h3 className="font-serif font-bold text-lg text-[#0B1320] dark:text-white">
+                  {isExpired
+                    ? "Membership Subscription Expired"
+                    : `Membership Expiring in ${daysUntilExpiry} Day${daysUntilExpiry === 1 ? "" : "s"}!`}
+                </h3>
+              </div>
+            </div>
+
+            <div className="text-xs text-[#4B5563] dark:text-[#9CA3AF] space-y-3 leading-relaxed">
+              <p>
+                Esteemed <strong className="font-serif text-[#0B1320] dark:text-white">{member?.name || "Member"}</strong>,
+              </p>
+              <p>
+                Your <strong className="font-serif text-[#921111] dark:text-[#DFCA9B]">{plan?.name || "Club Membership"}</strong> privilege is valid through <strong className="font-mono text-[#0B1320] dark:text-white">{membership?.endDate ? formatDate(membership.endDate) : "soon"}</strong>.
+              </p>
+              <div className="p-3.5 rounded-md bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] space-y-1.5 text-[11px]">
+                <div className="font-bold text-[#8C6D23] dark:text-[#DFCA9B] uppercase tracking-wider">
+                  Impact of Expiration:
+                </div>
+                <ul className="list-disc list-inside space-y-1 text-[#6B7280] dark:text-[#9CA3AF]">
+                  <li>Complimentary court access reverts to standard walk-in rates</li>
+                  <li>Advance booking window drops to community 3-day window</li>
+                  <li>Clubhouse dining & Pro Shop discounts are temporarily suspended</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2 border-t border-[#E5DFD5] dark:border-[#222D3E]">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowExpiryPopup(false);
+                  setHasDismissedExpiry(true);
+                }}
+                className="flex-1 py-2.5 rounded-md bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] hover:bg-[#FAF8F5]/80 text-[#4B5563] dark:text-[#9CA3AF] font-bold text-xs uppercase tracking-wider transition-colors"
+              >
+                Remind Me Later
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowExpiryPopup(false);
+                  setShowUpgradeModal(true);
+                }}
+                className="flex-1 py-2.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm transition-all"
+              >
+                <span>Renew / Upgrade Plan</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
       )}
