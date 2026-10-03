@@ -309,13 +309,21 @@ export function Navbar() {
               )}
             </div>
           ) : (
-            <Link
-              href="/login"
-              className="flex items-center gap-1.5 px-4 py-2 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white text-xs font-bold tracking-widest uppercase shadow-sm transition-all"
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>Sign In</span>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/login?tab=signup"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-md border border-[#C5A059] text-[#921111] dark:text-[#DFCA9B] hover:bg-[#FAF7EE] dark:hover:bg-[#1C1608] text-xs font-bold tracking-wider uppercase transition-all"
+              >
+                <span>Join Free</span>
+              </Link>
+              <Link
+                href="/login"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white text-xs font-bold tracking-widest uppercase shadow-sm transition-all"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Sign In</span>
+              </Link>
+            </div>
           )}
         </div>
       </div>

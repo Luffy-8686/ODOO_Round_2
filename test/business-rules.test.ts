@@ -119,7 +119,7 @@ describe("Sports Club Management Engine — Comprehensive Business Rule Suite", 
   // TEST 3: Max 2 Bookings per Member per Day & Quota Release on Cancel
   describe("3. Member Daily Quota Limit (Max 2/day) & Cancel Release", () => {
     it("Enforces 2 bookings per day limit for members and releases quota upon cancellation", async () => {
-      const quotaDate = new Date(Date.now() + 150 * 24 * 60 * 60 * 1000 + Math.random() * 10000000);
+      const quotaDate = new Date(Date.now() + 8 * 24 * 60 * 60 * 1000);
       quotaDate.setHours(8, 0, 0, 0);
 
       const slot1 = new Date(quotaDate); // 8:00 AM
@@ -179,7 +179,7 @@ describe("Sports Club Management Engine — Comprehensive Business Rule Suite", 
   // TEST 4: Expired Membership Reverts to Walk-in Pricing
   describe("4. Expired Membership Pricing Safeguard", () => {
     it("Expired member loses free/discounted tier and gets charged full Walk-in pricing", async () => {
-      const testDate = new Date(Date.now() + 200 * 24 * 60 * 60 * 1000 + Math.random() * 10000000);
+      const testDate = new Date(Date.now() + 9 * 24 * 60 * 60 * 1000);
       testDate.setHours(15, 0, 0, 0);
 
       const booking = await createCourtBookingAtomic({
@@ -295,6 +295,137 @@ describe("Sports Club Management Engine — Comprehensive Business Rule Suite", 
       expect(res).toBeDefined();
       expect(typeof res.releasedBookings).toBe("number");
       expect(typeof res.expiryAlertsSent).toBe("number");
+    });
+  });
+
+  // TEST 8: Past Slot Booking Safeguard
+  describe("8. Past Date & Slot Booking Prevention", () => {
+    it("Rejects attempts to book court slots in the past", async () => {
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      yesterday.setHours(10, 0, 0, 0);
+
+      await expect(
+        createCourtBookingAtomic({
+          courtId: court.id,
+          bookerName: "Time Traveler",
+          bookerPhone: "+91 99999 00000",
+          bookerEmail: "past@test.com",
+          startTime: yesterday,
+        })
+      ).rejects.toThrow(/Cannot book court slots in the past/);
+    });
+  });
+
+  // TEST 9: Advance Booking Window Enforcement
+  describe("9. Advance Booking Window Enforcement", () => {
+    it("Enforces plan advance booking days limits for members", async () => {
+      const farFuture = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
+      farFuture.setHours(10, 0, 0, 0);
+
+      await expect(
+        createCourtBookingAtomic({
+          courtId: court.id,
+          memberId: goldMember.id,
+          bookerName: goldMember.name,
+          bookerPhone: goldMember.phone,
+          bookerEmail: "advance@test.com",
+          startTime: farFuture,
+        })
+      ).rejects.toThrow(/Advance booking limit reached/);
+    });
+  });
+
+  // TEST 10: Free Tier Registration & Self-Upgrade Engine
+  describe("10. Public Registration (Free Tier) & Self-Upgrade Engine", () => {
+    it("Provisions Free Tier account for new visitors and upgrades seamlessly to Gold", async () => {
+      const testEmail = `newuser_${Date.now()}@test.com`;
+
+      // 1. Create Free Tier Member
+      let freePlan = await prisma.plan.findFirst({ where: { tier: "FREE" } });
+      if (!freePlan) {
+        freePlan = await prisma.plan.create({
+          data: {
+            tier: "FREE",
+            name: "Free Community Tier",
+            monthlyFeePaise: 0,
+            annualFeePaise: 0,
+            courtRatePerHourPaise: 80000,
+            shopDiscountPercent: 0,
+            barDiscountPercent: 0,
+            maxBookingsPerDay: 1,
+            advanceBookingDays: 3,
+            description: "Community access with standard walk-in court rates.",
+          },
+        });
+      }
+
+      const user = await prisma.user.create({
+        data: {
+          email: testEmail,
+          name: "New Visitor",
+          role: "MEMBER",
+          phone: "+91 91111 22222",
+        },
+      });
+
+      const newMember = await prisma.member.create({
+        data: {
+          userId: user.id,
+          memberId: `CC-TEST-${Date.now().toString().slice(-4)}`,
+          name: "New Visitor",
+          email: testEmail,
+          phone: "+91 91111 22222",
+          status: "ACTIVE",
+          memberships: {
+            create: {
+              planId: freePlan.id,
+              tier: "FREE",
+              startDate: new Date(),
+              endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+              status: "ACTIVE",
+              amountPaidPaise: 0,
+            },
+          },
+        },
+        include: { memberships: { include: { plan: true } } },
+      });
+
+      expect(newMember.memberships[0].tier).toBe("FREE");
+      expect(newMember.memberships[0].plan.advanceBookingDays).toBe(3);
+
+      // 2. Perform Self-Upgrade to Gold
+      const goldPlan = await prisma.plan.findFirst({ where: { tier: "GOLD" } });
+      expect(goldPlan).toBeDefined();
+
+      // Deactivate old membership
+      await prisma.membership.updateMany({
+        where: { memberId: newMember.id, status: "ACTIVE" },
+        data: { status: "UPGRADED" },
+      });
+
+      // Create new Gold membership
+      const upgradedMembership = await prisma.membership.create({
+        data: {
+          memberId: newMember.id,
+          planId: goldPlan!.id,
+          tier: "GOLD",
+          startDate: new Date(),
+          endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          status: "ACTIVE",
+          amountPaidPaise: goldPlan!.annualFeePaise,
+          paymentMethod: "UPI",
+        },
+        include: { plan: true },
+      });
+
+      expect(upgradedMembership.status).toBe("ACTIVE");
+      expect(upgradedMembership.tier).toBe("GOLD");
+      expect(upgradedMembership.plan.courtRatePerHourPaise).toBe(0);
+
+      // Clean up test records
+      await prisma.membership.deleteMany({ where: { memberId: newMember.id } });
+      await prisma.member.delete({ where: { id: newMember.id } });
+      await prisma.user.delete({ where: { id: user.id } });
     });
   });
 });

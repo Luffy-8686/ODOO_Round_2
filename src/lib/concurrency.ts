@@ -178,6 +178,12 @@ export async function createCourtBookingAtomic(input: CreateBookingInput) {
   const duration = input.durationMinutes || 60;
   const end = new Date(start.getTime() + duration * 60000);
 
+  const now = new Date();
+  // Disallow booking slots in the past (allow 5-min grace period for clock drift / form completion)
+  if (start.getTime() < now.getTime() - 5 * 60 * 1000) {
+    throw new Error("Cannot book court slots in the past.");
+  }
+
   const mutex = getCourtMutex(input.courtId);
   const releaseLock = await mutex.acquire();
 
@@ -216,16 +222,28 @@ export async function createCourtBookingAtomic(input: CreateBookingInput) {
             const activeMembership = member.memberships[0];
             activeTier = activeMembership.plan.tier;
             bookerType = activeTier as any;
+
+            // Enforce plan advance booking days limit (e.g. Gold: 14 days, Silver: 7 days, Free: 3 days)
+            const advanceDays = activeMembership.plan.advanceBookingDays || (activeTier === "FREE" ? 3 : 14);
+            const maxAllowedDate = new Date();
+            maxAllowedDate.setDate(maxAllowedDate.getDate() + advanceDays);
+            maxAllowedDate.setHours(23, 59, 59, 999);
+
+            if (start.getTime() > maxAllowedDate.getTime()) {
+              throw new Error(
+                `Advance booking limit reached: Your ${activeMembership.plan.name} allows booking up to ${advanceDays} days in advance.`
+              );
+            }
+
+            // 3. Quota check for active members (max 2 per day)
+            const quota = await checkMemberDailyQuota(input.memberId, start, undefined, tx);
+            if (!quota.allowed) {
+              throw new Error(
+                `Daily booking quota exceeded: Member has already booked ${quota.currentCount}/${quota.maxAllowed} sessions today.`
+              );
+            }
           } else {
             bookerType = "WALK_IN";
-          }
-
-          // 3. Quota check for members (max 2 per day)
-          const quota = await checkMemberDailyQuota(input.memberId, start, undefined, tx);
-          if (!quota.allowed) {
-            throw new Error(
-              `Daily booking quota exceeded: Member has already booked ${quota.currentCount}/${quota.maxAllowed} sessions today.`
-            );
           }
         }
       }

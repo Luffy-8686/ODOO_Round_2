@@ -61,6 +61,41 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       return NextResponse.json({ error: "Member not found" }, { status: 404 });
     }
 
+    // Automated 5-Day Expiry Notification Check
+    const activeMembership = member.memberships?.find((m: any) => m.status === "ACTIVE");
+    if (activeMembership && activeMembership.endDate) {
+      const now = new Date();
+      const expiryDate = new Date(activeMembership.endDate);
+      const diffDays = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (diffDays <= 5 && diffDays >= 0) {
+        const existingAlert = await prisma.notification.findFirst({
+          where: {
+            OR: [
+              { userId: member.userId || undefined },
+              { memberId: member.id }
+            ],
+            type: "MEMBERSHIP_EXPIRING",
+            createdAt: { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) },
+          },
+        });
+
+        if (!existingAlert) {
+          await prisma.notification.create({
+            data: {
+              userId: member.userId,
+              memberId: member.id,
+              type: "MEMBERSHIP_EXPIRING",
+              title: "⚠️ Membership Expiring Soon",
+              message: `Your ${activeMembership.plan?.name || "Club"} membership will expire in ${diffDays} day${diffDays === 1 ? "" : "s"} (${expiryDate.toLocaleDateString()}). Please renew or upgrade to maintain uninterrupted court access and club privileges.`,
+              channel: "IN_APP",
+              status: "SENT",
+            },
+          });
+        }
+      }
+    }
+
     return NextResponse.json({ member });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

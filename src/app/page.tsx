@@ -208,30 +208,28 @@ export default function PublicHomePage() {
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-4 pt-6">
+            <Link
+              href="/login?tab=signup"
+              className="px-6 py-3.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs tracking-widest uppercase shadow-md transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2"
+            >
+              <span>Join Free Community Tier</span>
+              <ArrowRight className="w-4 h-4 text-[#C5A059]" />
+            </Link>
             <button
               onClick={() => {
                 setShowTrialModal(true);
                 setTrialSuccess(false);
               }}
-              className="px-6 py-3.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs tracking-widest uppercase shadow-md transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+              className="px-6 py-3.5 rounded-md border border-[#C5A059] hover:bg-[#C5A059]/10 text-[#DFCA9B] font-bold text-xs tracking-widest uppercase transition-all"
             >
-              Book a Private Trial Session
+              Book Private Trial
             </button>
             <a
               href="#plans"
-              className="px-6 py-3.5 rounded-md border border-[#C5A059] hover:bg-[#C5A059]/10 text-[#DFCA9B] font-bold text-xs tracking-widest uppercase transition-all"
-            >
-              Membership Privileges
-            </a>
-            <button
-              onClick={() => {
-                setShowQuoteModal(true);
-                setQuoteSuccess(false);
-              }}
               className="px-6 py-3.5 rounded-md bg-[#162032] hover:bg-[#1F293D] border border-[#334155] text-[#E5E7EB] font-bold text-xs tracking-widest uppercase transition-all"
             >
-              Corporate Inquiries
-            </button>
+              Membership Categories
+            </a>
           </div>
 
           {/* Quick Stats Strip */}
@@ -401,8 +399,8 @@ export default function PublicHomePage() {
                   </div>
 
                   <div className="mt-8 pt-6 border-t border-[#E5DFD5] dark:border-[#222D3E]">
-                    <button
-                      onClick={() => setShowTrialModal(true)}
+                    <Link
+                      href="/login?tab=signup"
                       className={`w-full py-3 rounded-md font-bold text-xs tracking-widest uppercase flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                         isGold
                           ? "bg-[#C5A059] hover:bg-[#B38E46] text-[#0B1320] shadow-sm"
@@ -411,7 +409,7 @@ export default function PublicHomePage() {
                     >
                       <span>Apply for {plan.tier} Privilege</span>
                       <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
+                    </Link>
                   </div>
                 </div>
               );

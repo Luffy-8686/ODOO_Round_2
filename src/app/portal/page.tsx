@@ -100,6 +100,43 @@ export default function MemberPortalPage(props: any) {
   const [reservingTableLoading, setReservingTableLoading] = useState(false);
   const [reservationSuccess, setReservationSuccess] = useState<any>(null);
 
+  // Membership Upgrade state
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeTier, setUpgradeTier] = useState<"GOLD" | "SILVER" | "JUNIOR">("GOLD");
+  const [billingCycle, setBillingCycle] = useState<"MONTHLY" | "ANNUAL">("ANNUAL");
+  const [paymentMethod, setPaymentMethod] = useState<"UPI" | "CARD" | "NET_BANKING">("UPI");
+  const [isUpgrading, setIsUpgrading] = useState(false);
+  const [upgradeSuccess, setUpgradeSuccess] = useState<any>(null);
+  const [upgradeError, setUpgradeError] = useState<string | null>(null);
+
+  const handleUpgradeMembership = async () => {
+    if (!member) return;
+    setIsUpgrading(true);
+    setUpgradeError(null);
+    try {
+      const res = await fetch("/api/members/upgrade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          memberId: member.id,
+          targetTier: upgradeTier,
+          billingCycle,
+          paymentMethod,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to process membership upgrade.");
+      }
+      setUpgradeSuccess(data);
+      await fetchMemberData();
+    } catch (err: any) {
+      setUpgradeError(err.message || "An error occurred during upgrade.");
+    } finally {
+      setIsUpgrading(false);
+    }
+  };
+
   const fetchMemberData = async () => {
     setLoading(true);
     try {
@@ -226,7 +263,8 @@ export default function MemberPortalPage(props: any) {
 
   const isSlotPast = (timeStr: string) => {
     const todayStr = new Date().toISOString().split("T")[0];
-    if (bookingDate !== todayStr) return false;
+    if (bookingDate < todayStr) return true;
+    if (bookingDate > todayStr) return false;
     const [h, m] = timeStr.split(":").map(Number);
     const now = new Date();
     const slotDate = new Date();
@@ -274,7 +312,25 @@ export default function MemberPortalPage(props: any) {
   const membership = member?.memberships?.[0];
   const plan = membership?.plan;
   const isGold = plan?.tier === "GOLD";
-  const barDiscountPercent = plan?.barDiscountPercent || (isGold ? 20 : 10);
+  const isSilver = plan?.tier === "SILVER";
+  const isJunior = plan?.tier === "JUNIOR";
+  const isFree = !plan || plan?.tier === "FREE";
+  const barDiscountPercent = plan?.barDiscountPercent || (isGold ? 20 : isSilver ? 10 : isJunior ? 15 : 0);
+
+  // Expiry calculation
+  const expiryDate = membership?.endDate ? new Date(membership.endDate) : null;
+  const daysUntilExpiry = expiryDate
+    ? Math.ceil((expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+  const isExpiringSoon = daysUntilExpiry !== null && daysUntilExpiry <= 5 && daysUntilExpiry >= 0;
+  const isExpired = daysUntilExpiry !== null && daysUntilExpiry < 0;
+
+  // Advance booking window clamp
+  const advanceDays = plan?.advanceBookingDays || (isFree ? 3 : 14);
+  const maxAllowedDate = new Date();
+  maxAllowedDate.setDate(maxAllowedDate.getDate() + advanceDays);
+  const maxAllowedDateStr = maxAllowedDate.toISOString().split("T")[0];
+  const todayStr = new Date().toISOString().split("T")[0];
 
   // Calculate cart pricing
   const cartSubtotalPaise = cart.reduce((acc, item) => acc + item.quantity * item.menuItem.pricePaise, 0);
@@ -399,15 +455,35 @@ export default function MemberPortalPage(props: any) {
             {member?.name ? member.name.slice(0, 2).toUpperCase() : "CC"}
           </div>
           <div>
-            <h1 className="font-serif text-xl sm:text-2xl font-bold text-[#0B1320] dark:text-white flex items-center gap-2.5">
-              <span>{member?.name || currentUser?.name || "Distinguished Member"}</span>
-              <span className="text-[9px] font-mono px-2 py-0.5 rounded font-bold uppercase tracking-wider border border-[#DFCA9B] bg-[#FAF7EE] text-[#8C6D23] dark:bg-[#1C1608] dark:text-[#E3CEA4] dark:border-[#4B3C18]">
-                {plan?.tier || "GOLD"} PRIVILEGE
+            <div className="flex items-center gap-2.5">
+              <h1 className="font-serif text-xl sm:text-2xl font-bold text-[#0B1320] dark:text-white">
+                {member?.name || currentUser?.name || "Distinguished Member"}
+              </h1>
+              <span className={`text-[9px] font-mono px-2 py-0.5 rounded font-bold uppercase tracking-wider border ${
+                isGold
+                  ? "border-[#DFCA9B] bg-[#FAF7EE] text-[#8C6D23] dark:bg-[#1C1608] dark:text-[#E3CEA4] dark:border-[#4B3C18]"
+                  : isSilver
+                  ? "border-slate-300 bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600"
+                  : isJunior
+                  ? "border-teal-300 bg-teal-50 text-teal-700 dark:bg-teal-950 dark:text-teal-300 dark:border-teal-800"
+                  : "border-amber-200 bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800"
+              }`}>
+                {plan?.tier || "FREE"} PRIVILEGE
               </span>
-            </h1>
-            <span className="text-xs text-[#6B7280] dark:text-[#9CA3AF] font-mono">
-              Club Member ID: {member?.memberId || currentUser?.memberCode || "CC-1868-001"}
-            </span>
+            </div>
+            <div className="flex items-center gap-3 mt-0.5">
+              <span className="text-xs text-[#6B7280] dark:text-[#9CA3AF] font-mono">
+                Club ID: {member?.memberId || currentUser?.memberCode || "CC-1868-001"}
+              </span>
+              {(!isGold || isExpired) && (
+                <button
+                  onClick={() => setShowUpgradeModal(true)}
+                  className="text-[10px] font-bold text-[#921111] dark:text-[#DFCA9B] hover:underline uppercase tracking-wider flex items-center gap-0.5"
+                >
+                  <span>✨ {isFree ? "Upgrade Tier" : "Change / Renew Plan"}</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -498,6 +574,51 @@ export default function MemberPortalPage(props: any) {
         </div>
       </div>
 
+      {/* 5-DAY EXPIRY ALERT NOTIFICATION BANNER */}
+      {isExpiringSoon && (
+        <div className="p-4 rounded-lg bg-[#FFFBEB] dark:bg-[#1E1608] border border-[#FDE68A] dark:border-[#78350F] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-sm">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-[#D97706] dark:text-[#FBBF24] shrink-0 mt-0.5" />
+            <div>
+              <p className="font-serif font-bold text-sm text-[#92400E] dark:text-[#FDE68A]">
+                ⚠️ Membership Expiring in {daysUntilExpiry} Day{daysUntilExpiry === 1 ? "" : "s"} ({formatDate(membership.endDate)})
+              </p>
+              <p className="text-[#B45309] dark:text-[#D97706] mt-0.5 leading-relaxed">
+                Your <strong>{plan?.name}</strong> privilege is nearing completion. Renew or upgrade your tier today to preserve your court privileges and member tab rates.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowUpgradeModal(true)}
+            className="px-4 py-2 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider shrink-0 transition-all shadow-sm cursor-pointer"
+          >
+            Renew / Upgrade Now
+          </button>
+        </div>
+      )}
+
+      {isExpired && (
+        <div className="p-4 rounded-lg bg-[#FEF2F2] dark:bg-[#1E0E10] border border-[#FECACA] dark:border-[#581A1D] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-sm">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-[#DC2626] dark:text-[#F87171] shrink-0 mt-0.5" />
+            <div>
+              <p className="font-serif font-bold text-sm text-[#991B1B] dark:text-[#FCA5A5]">
+                🚨 Membership Expired on {formatDate(membership.endDate)}
+              </p>
+              <p className="text-[#B91C1C] dark:text-[#F87171] mt-0.5 leading-relaxed">
+                Your club subscription has expired. Standard member discounts and booking windows are inactive until renewed.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowUpgradeModal(true)}
+            className="px-4 py-2 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider shrink-0 transition-all shadow-sm cursor-pointer"
+          >
+            Renew Tier
+          </button>
+        </div>
+      )}
+
       {/* 1. DIGITAL MEMBERSHIP CARD & DASHBOARD OVERVIEW */}
       {activeTab === "PASS" && (
         <div className="space-y-6">
@@ -507,6 +628,10 @@ export default function MemberPortalPage(props: any) {
               className={`p-6 rounded-lg relative overflow-hidden shadow-lg flex flex-col justify-between h-80 text-white ${
                 isGold
                   ? "bg-[#0B1320] border-2 border-[#C5A059]"
+                  : isSilver
+                  ? "bg-[#1E293B] border-2 border-slate-400"
+                  : isJunior
+                  ? "bg-[#042F2E] border-2 border-teal-500"
                   : "bg-[#162032] border border-[#334155]"
               }`}
             >
@@ -516,10 +641,12 @@ export default function MemberPortalPage(props: any) {
                   <span className="text-[9px] tracking-[0.24em] uppercase font-bold text-[#DFCA9B] block">
                     The Champions Club • Est. 1868
                   </span>
-                  <h3 className="font-serif text-lg font-bold tracking-tight text-white">{plan?.name || "Gold All-Access Tier"}</h3>
+                  <h3 className="font-serif text-lg font-bold tracking-tight text-white">
+                    {plan?.name || "Free Community Tier"}
+                  </h3>
                 </div>
                 <div className="w-8 h-8 rounded bg-[#921111] text-[#C5A059] border border-[#C5A059]/40 flex items-center justify-center font-serif text-xs font-bold">
-                  👑
+                  {isGold ? "👑" : isSilver ? "🥈" : isJunior ? "🧒" : "🎟️"}
                 </div>
               </div>
 
@@ -535,7 +662,7 @@ export default function MemberPortalPage(props: any) {
               </div>
 
               <div className="pt-3 border-t border-white/10 flex items-center justify-between text-[11px]">
-                <span className="text-[#9CA3AF]">Valid Through: <strong className="text-white font-mono">{membership?.endDate ? formatDate(membership.endDate) : "Indefinite"}</strong></span>
+                <span className="text-[#9CA3AF]">Valid Through: <strong className="text-white font-mono">{membership?.endDate ? formatDate(membership.endDate) : "Active Account"}</strong></span>
                 <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-[#FAF7EE] text-[#8C6D23] border border-[#DFCA9B]">
                   {member?.status || "ACTIVE"}
                 </span>
@@ -545,8 +672,21 @@ export default function MemberPortalPage(props: any) {
             {/* PLAN ENTITLEMENTS & PRIVILEGES */}
             <div className="md:col-span-2 p-6 rounded-lg bg-white dark:bg-[#0E1522] border border-[#E5DFD5] dark:border-[#222D3E] shadow-sm space-y-4 text-xs">
               <div className="flex items-center justify-between border-b border-[#E5DFD5] dark:border-[#222D3E] pb-3">
-                <h3 className="font-serif text-base font-bold text-[#0B1320] dark:text-white">Tier Privileges & Daily Allowances</h3>
-                <span className="text-[10px] font-bold text-[#8C6D23] uppercase tracking-wider">Active Entitlements</span>
+                <div>
+                  <h3 className="font-serif text-base font-bold text-[#0B1320] dark:text-white">Tier Privileges & Daily Allowances</h3>
+                  <span className="text-[10px] text-[#8C6D23] dark:text-[#DFCA9B] uppercase font-bold tracking-wider">
+                    {plan?.name || "Free Community Tier"} Entitlements
+                  </span>
+                </div>
+                {(!isGold || isExpired) && (
+                  <button
+                    onClick={() => setShowUpgradeModal(true)}
+                    className="px-3 py-1.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1 shadow-sm transition-all"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
+                    <span>{isFree ? "Upgrade Tier" : "Upgrade Plan"}</span>
+                  </button>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3.5">
@@ -902,6 +1042,8 @@ export default function MemberPortalPage(props: any) {
                 <span className="text-[10px] uppercase font-bold text-[#8C6D23] dark:text-[#DFCA9B] tracking-wider pl-2">Date:</span>
                 <input
                   type="date"
+                  min={todayStr}
+                  max={maxAllowedDateStr}
                   value={bookingDate}
                   onChange={(e) => setBookingDate(e.target.value)}
                   className="p-1.5 rounded border border-[#E5DFD5] dark:border-[#222D3E] bg-white dark:bg-[#0E1522] text-xs font-bold text-[#0B1320] dark:text-white"
@@ -1945,6 +2087,239 @@ export default function MemberPortalPage(props: any) {
                 {reservingTableLoading ? "Reserving..." : "Confirm Table"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* UPGRADE MEMBERSHIP MODAL - NYAC Aesthetic */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 z-50 bg-[#0B1320]/80 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0E1522] rounded-xl max-w-xl w-full border border-[#C5A059]/40 p-6 sm:p-7 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95 max-h-[92vh] overflow-y-auto">
+            <button
+              onClick={() => {
+                setShowUpgradeModal(false);
+                setUpgradeSuccess(null);
+                setUpgradeError(null);
+              }}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-[#FAF8F5] dark:hover:bg-[#121A28] text-[#6B7280] hover:text-[#0B1320] dark:hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {upgradeSuccess ? (
+              <div className="text-center space-y-4 py-4">
+                <div className="w-14 h-14 rounded-full bg-[#FAF7EE] dark:bg-[#1C1608] border border-[#DFCA9B] text-[#8C6D23] dark:text-[#DFCA9B] flex items-center justify-center mx-auto text-2xl shadow-sm">
+                  👑
+                </div>
+                <div>
+                  <h3 className="font-serif font-bold text-xl text-[#0B1320] dark:text-white">
+                    Membership Successfully Upgraded!
+                  </h3>
+                  <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] mt-1">
+                    Your account has been elevated to <strong>{upgradeSuccess.tier} Tier</strong> privileges.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-lg bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] text-left text-xs space-y-2 font-mono">
+                  <div className="flex justify-between">
+                    <span className="text-[#6B7280]">Member:</span>
+                    <span className="font-bold text-[#0B1320] dark:text-white font-serif">{member?.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#6B7280]">New Tier:</span>
+                    <span className="font-bold text-[#8C6D23] dark:text-[#DFCA9B]">{upgradeSuccess.tier} ALL-ACCESS</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#6B7280]">Receipt Reference:</span>
+                    <span className="font-bold text-[#0B1320] dark:text-white">{upgradeSuccess.invoiceNumber || "INV-" + Date.now().toString().slice(-6)}</span>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t border-[#E5DFD5] dark:border-[#222D3E]">
+                    <span className="text-[#6B7280]">Amount Settled:</span>
+                    <span className="font-bold text-[#921111] dark:text-[#DFCA9B]">{formatINR(upgradeSuccess.amountPaise || 0)}</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setShowUpgradeModal(false);
+                    setUpgradeSuccess(null);
+                  }}
+                  className="w-full py-3 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-widest shadow-sm transition-all"
+                >
+                  Return to Member Portal
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 pb-3 border-b border-[#E5DFD5] dark:border-[#222D3E]">
+                  <div className="w-10 h-10 rounded-md bg-[#921111] text-[#C5A059] border border-[#C5A059]/40 flex items-center justify-center font-serif text-lg font-bold shadow-sm">
+                    👑
+                  </div>
+                  <div>
+                    <h3 className="font-serif font-bold text-lg text-[#0B1320] dark:text-white">
+                      Elevate Your Club Membership
+                    </h3>
+                    <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
+                      Unlock complimentary courts, priority reservations, and clubhouse privileges.
+                    </p>
+                  </div>
+                </div>
+
+                {upgradeError && (
+                  <div className="p-3 rounded-md bg-[#FDF4F4] dark:bg-[#1E0E10] border border-[#F8CCCC] dark:border-[#581A1D] text-[#921111] dark:text-[#F87171] text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{upgradeError}</span>
+                  </div>
+                )}
+
+                {/* Billing Cycle Switcher */}
+                <div className="flex bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] p-1 rounded-md text-xs font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => setBillingCycle("ANNUAL")}
+                    className={`flex-1 py-1.5 rounded transition-all uppercase tracking-wider ${
+                      billingCycle === "ANNUAL"
+                        ? "bg-[#921111] text-white shadow-sm font-bold"
+                        : "text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#0B1320] dark:hover:text-white"
+                    }`}
+                  >
+                    Annual Billing (Save 17%)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBillingCycle("MONTHLY")}
+                    className={`flex-1 py-1.5 rounded transition-all uppercase tracking-wider ${
+                      billingCycle === "MONTHLY"
+                        ? "bg-[#921111] text-white shadow-sm font-bold"
+                        : "text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#0B1320] dark:hover:text-white"
+                    }`}
+                  >
+                    Monthly Billing
+                  </button>
+                </div>
+
+                {/* Tier Selection Cards */}
+                <div className="space-y-2.5">
+                  {[
+                    {
+                      tier: "GOLD" as const,
+                      name: "Gold All-Access Tier",
+                      monthlyPaise: 500000,
+                      annualPaise: 5000000,
+                      perks: "100% Free Courts • 14-Day Advance Booking • 20% Dining Discount",
+                      badge: "Most Popular",
+                    },
+                    {
+                      tier: "SILVER" as const,
+                      name: "Silver Standard Tier",
+                      monthlyPaise: 250000,
+                      annualPaise: 2500000,
+                      perks: "50% Off Courts • 7-Day Advance Booking • 10% Dining Discount",
+                      badge: "Standard",
+                    },
+                    {
+                      tier: "JUNIOR" as const,
+                      name: "Junior Academy Tier (Under 18)",
+                      monthlyPaise: 150000,
+                      annualPaise: 1500000,
+                      perks: "60% Off Off-Peak Courts • Academy Discounts • 15% Dining Discount",
+                      badge: "Youth",
+                    },
+                  ].map((t) => {
+                    const isSelected = upgradeTier === t.tier;
+                    const pricePaise = billingCycle === "ANNUAL" ? t.annualPaise : t.monthlyPaise;
+
+                    return (
+                      <div
+                        key={t.tier}
+                        onClick={() => setUpgradeTier(t.tier)}
+                        className={`p-3.5 rounded-lg border cursor-pointer transition-all ${
+                          isSelected
+                            ? "border-[#C5A059] bg-[#FAF7EE]/60 dark:bg-[#1C1608]/60 shadow-sm"
+                            : "border-[#E5DFD5] dark:border-[#222D3E] hover:border-[#C5A059]/50 bg-white dark:bg-[#0E1522]"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-serif font-bold text-sm text-[#0B1320] dark:text-white">
+                              {t.name}
+                            </span>
+                            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded font-bold uppercase bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] text-[#8C6D23]">
+                              {t.badge}
+                            </span>
+                          </div>
+                          <div className="text-right font-mono">
+                            <span className="font-bold text-sm text-[#921111] dark:text-[#DFCA9B]">
+                              {formatINR(pricePaise)}
+                            </span>
+                            <span className="text-[10px] text-[#6B7280]">
+                              /{billingCycle === "ANNUAL" ? "yr" : "mo"}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-[#4B5563] dark:text-[#9CA3AF] mt-1 leading-snug">
+                          {t.perks}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Payment Method */}
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#8C6D23] dark:text-[#DFCA9B] tracking-wider block mb-1.5">
+                    Select Payment Method:
+                  </label>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    {[
+                      { id: "UPI" as const, label: "UPI Instant QR", icon: Zap },
+                      { id: "CARD" as const, label: "Credit/Debit Card", icon: CreditCard },
+                      { id: "NET_BANKING" as const, label: "Net Banking", icon: ShieldCheck },
+                    ].map((pm) => (
+                      <button
+                        key={pm.id}
+                        type="button"
+                        onClick={() => setPaymentMethod(pm.id)}
+                        className={`p-2.5 rounded-md border text-center transition-all flex flex-col items-center justify-center gap-1 ${
+                          paymentMethod === pm.id
+                            ? "border-[#C5A059] bg-[#FAF7EE] dark:bg-[#1C1608] text-[#8C6D23] dark:text-[#DFCA9B] font-bold shadow-xs"
+                            : "border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] text-[#4B5563] dark:text-[#9CA3AF]"
+                        }`}
+                      >
+                        <pm.icon className="w-3.5 h-3.5" />
+                        <span className="text-[10px] uppercase tracking-wider">{pm.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Confirm Action */}
+                <div className="flex items-center gap-2 pt-3 border-t border-[#E5DFD5] dark:border-[#222D3E]">
+                  <button
+                    type="button"
+                    onClick={() => setShowUpgradeModal(false)}
+                    className="flex-1 py-2.5 rounded-md bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] hover:bg-[#FAF8F5]/80 text-[#4B5563] dark:text-[#9CA3AF] font-bold text-xs uppercase tracking-wider transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isUpgrading}
+                    onClick={handleUpgradeMembership}
+                    className="flex-1 py-2.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+                  >
+                    {isUpgrading ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <span>Activate {upgradeTier} Plan</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

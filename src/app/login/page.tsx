@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, Suspense, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -15,8 +15,11 @@ import {
   Smartphone,
   ChevronRight,
   Sparkles,
+  UserPlus,
+  User,
+  Phone,
 } from "lucide-react";
-import { ROLE_METADATA, Role } from "@/lib/roles";
+import { Role } from "@/lib/roles";
 
 const DEMO_PERSONAS = [
   {
@@ -97,19 +100,75 @@ function LoginFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "";
+  const initialTab = searchParams.get("tab");
 
-  const [authMode, setAuthMode] = useState<"password" | "otp">("password");
+  const [authMode, setAuthMode] = useState<"password" | "otp" | "signup">(
+    initialTab === "signup" ? "signup" : "password"
+  );
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [otpCode, setOtpCode] = useState("123456");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
   const [quickLoginRole, setQuickLoginRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialTab === "signup") {
+      setAuthMode("signup");
+    }
+  }, [initialTab]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setErrorMsg("");
+    setSuccessMsg("");
+
+    if (authMode === "signup") {
+      try {
+        const res = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: name.trim(),
+            email: email.trim(),
+            phone: phone.trim(),
+            password: password.trim(),
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to create account.");
+        }
+
+        setSuccessMsg("Welcome! Free Tier account activated. Logging you in...");
+
+        // Automatically sign the new user in
+        const signInRes = await signIn("credentials", {
+          redirect: false,
+          email: email.trim(),
+          password: password.trim(),
+          callbackUrl: callbackUrl || "/portal",
+        });
+
+        if (signInRes?.ok) {
+          router.push(callbackUrl || "/portal");
+          router.refresh();
+        } else {
+          setAuthMode("password");
+          setErrorMsg("Account created! Please sign in with your credentials.");
+          setLoading(false);
+        }
+      } catch (err: any) {
+        setErrorMsg(err.message || "Registration failed. Please try again.");
+        setLoading(false);
+      }
+      return;
+    }
 
     try {
       const res = await signIn("credentials", {
@@ -174,7 +233,7 @@ function LoginFormContent() {
   return (
     <div className="min-h-[92vh] py-14 px-4 sm:px-6 lg:px-8 bg-[#FAF8F5] dark:bg-[#080D14] flex flex-col justify-center items-center transition-colors">
       <div className="max-w-4xl w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column: Sign In Card */}
+        {/* Left Column: Sign In / Sign Up Card */}
         <div className="lg:col-span-7 bg-white dark:bg-[#0E1522] rounded-lg shadow-sm border border-[#E5DFD5] dark:border-[#222D3E] p-8 sm:p-10">
           <div className="flex items-center gap-3.5 mb-8">
             <div className="w-12 h-12 rounded-lg bg-[#921111] text-[#C5A059] border border-[#C5A059]/40 flex items-center justify-center shadow-sm">
@@ -182,7 +241,7 @@ function LoginFormContent() {
             </div>
             <div>
               <span className="text-[9px] font-bold uppercase tracking-[0.24em] text-[#8C6D23] dark:text-[#DFCA9B] block">
-                Members & Staff Entrance
+                {authMode === "signup" ? "New Guest Registration" : "Members & Staff Entrance"}
               </span>
               <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#0B1320] dark:text-white tracking-tight">
                 The Champions Club
@@ -190,52 +249,130 @@ function LoginFormContent() {
             </div>
           </div>
 
-          {/* Mode Switcher: Password vs OTP */}
-          <div className="flex bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] p-1 rounded-md mb-6">
+          {/* Mode Switcher: Password vs OTP vs Sign Up */}
+          <div className="flex bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] p-1 rounded-md mb-6 gap-1">
             <button
               type="button"
               onClick={() => {
                 setAuthMode("password");
                 setErrorMsg("");
+                setSuccessMsg("");
               }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-semibold tracking-wider uppercase rounded transition-all ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] font-semibold tracking-wider uppercase rounded transition-all ${
                 authMode === "password"
                   ? "bg-white dark:bg-[#1A2538] text-[#921111] dark:text-[#DFCA9B] shadow-sm font-bold"
                   : "text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#0B1320] dark:hover:text-white"
               }`}
             >
-              <KeyRound className="w-3.5 h-3.5 text-[#C5A059]" /> Club Password
+              <KeyRound className="w-3.5 h-3.5 text-[#C5A059]" /> Password
             </button>
             <button
               type="button"
               onClick={() => {
                 setAuthMode("otp");
                 setErrorMsg("");
+                setSuccessMsg("");
               }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs font-semibold tracking-wider uppercase rounded transition-all ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] font-semibold tracking-wider uppercase rounded transition-all ${
                 authMode === "otp"
                   ? "bg-white dark:bg-[#1A2538] text-[#921111] dark:text-[#DFCA9B] shadow-sm font-bold"
                   : "text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#0B1320] dark:hover:text-white"
               }`}
             >
-              <Smartphone className="w-3.5 h-3.5 text-[#C5A059]" /> Member OTP Pass
+              <Smartphone className="w-3.5 h-3.5 text-[#C5A059]" /> OTP Pass
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode("signup");
+                setErrorMsg("");
+                setSuccessMsg("");
+              }}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-[11px] font-semibold tracking-wider uppercase rounded transition-all ${
+                authMode === "signup"
+                  ? "bg-[#921111] text-white shadow-sm font-bold"
+                  : "text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#0B1320] dark:hover:text-white"
+              }`}
+            >
+              <UserPlus className="w-3.5 h-3.5 text-[#C5A059]" /> Join Free
             </button>
           </div>
+
+          {authMode === "signup" && (
+            <div className="mb-6 p-3.5 rounded-md bg-[#FAF7EE] dark:bg-[#1C1608] border border-[#DFCA9B] dark:border-[#4B3C18] flex items-start gap-2.5">
+              <Sparkles className="w-4 h-4 text-[#8C6D23] dark:text-[#DFCA9B] flex-shrink-0 mt-0.5" />
+              <div className="text-[11px] text-[#5C4511] dark:text-[#E3CEA4] leading-relaxed">
+                <strong className="font-serif">Instant Free Community Tier:</strong> Register to immediately access court reservations, digital member pass, cafe orders, and 1-click tier upgrades.
+              </div>
+            </div>
+          )}
 
           {errorMsg && (
             <div className="mb-6 p-4 rounded-md bg-[#FDF4F4] dark:bg-[#1E0E10] border border-[#F8CCCC] dark:border-[#581A1D] flex items-start gap-3 text-[#921111] dark:text-[#F87171] text-xs">
               <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-serif font-bold text-sm">Credentials Not Recognized</p>
+                <p className="font-serif font-bold text-sm">Notice</p>
                 <p className="mt-0.5 leading-relaxed">{errorMsg}</p>
               </div>
             </div>
           )}
 
+          {successMsg && (
+            <div className="mb-6 p-4 rounded-md bg-[#F0FDF4] dark:bg-[#0E2014] border border-[#BBF7D0] dark:border-[#1E3A24] flex items-start gap-3 text-[#15803D] dark:text-[#4ADE80] text-xs">
+              <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-serif font-bold text-sm">Account Activated</p>
+                <p className="mt-0.5 leading-relaxed">{successMsg}</p>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
+            {authMode === "signup" && (
+              <>
+                <div>
+                  <label className="block text-[10px] font-bold text-[#4B5563] dark:text-[#9CA3AF] uppercase tracking-wider mb-1.5">
+                    Full Legal Name
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#9CA3AF]">
+                      <User className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g. Sameer Kashyap"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] text-[#0B1320] dark:text-white placeholder-[#9CA3AF] focus:outline-none focus:border-[#C5A059] text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-[#4B5563] dark:text-[#9CA3AF] uppercase tracking-wider mb-1.5">
+                    Phone Number
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#9CA3AF]">
+                      <Phone className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="tel"
+                      required
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="e.g. +91 98765 43210"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] text-[#0B1320] dark:text-white placeholder-[#9CA3AF] focus:outline-none focus:border-[#C5A059] text-xs"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
             <div>
-              <label className="block text-[10px] font-bold text-[#4B5563] dark:text-[#9CA3AF] uppercase tracking-wider mb-2">
-                Official Club Email Address
+              <label className="block text-[10px] font-bold text-[#4B5563] dark:text-[#9CA3AF] uppercase tracking-wider mb-1.5">
+                {authMode === "signup" ? "Email Address" : "Official Club Email Address"}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#9CA3AF]">
@@ -246,19 +383,21 @@ function LoginFormContent() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. owner@championsclub.in or member email"
+                  placeholder={authMode === "signup" ? "name@example.com" : "e.g. owner@championsclub.in or member email"}
                   className="w-full pl-10 pr-4 py-2.5 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] text-[#0B1320] dark:text-white placeholder-[#9CA3AF] focus:outline-none focus:border-[#C5A059] text-xs"
                 />
               </div>
             </div>
 
-            {authMode === "password" ? (
+            {authMode !== "otp" ? (
               <div>
-                <div className="flex justify-between items-center mb-2">
+                <div className="flex justify-between items-center mb-1.5">
                   <label className="block text-[10px] font-bold text-[#4B5563] dark:text-[#9CA3AF] uppercase tracking-wider">
                     Password
                   </label>
-                  <span className="text-[10px] text-[#8C6D23] dark:text-[#DFCA9B] font-mono">Demo: Demo@1234</span>
+                  {authMode === "password" && (
+                    <span className="text-[10px] text-[#8C6D23] dark:text-[#DFCA9B] font-mono">Demo: Demo@1234</span>
+                  )}
                 </div>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#9CA3AF]">
@@ -269,14 +408,14 @@ function LoginFormContent() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter account password"
+                    placeholder={authMode === "signup" ? "Create a secure password" : "Enter account password"}
                     className="w-full pl-10 pr-4 py-2.5 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] text-[#0B1320] dark:text-white placeholder-[#9CA3AF] focus:outline-none focus:border-[#C5A059] text-xs"
                   />
                 </div>
               </div>
             ) : (
               <div>
-                <div className="flex justify-between items-center mb-2">
+                <div className="flex justify-between items-center mb-1.5">
                   <label className="block text-[10px] font-bold text-[#4B5563] dark:text-[#9CA3AF] uppercase tracking-wider">
                     OTP Verification Passcode
                   </label>
@@ -307,7 +446,7 @@ function LoginFormContent() {
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
-                  <span>Verify Credentials</span>
+                  <span>{authMode === "signup" ? "Create Free Account & Enter" : "Verify Credentials"}</span>
                   <ChevronRight className="w-4 h-4" />
                 </>
               )}
