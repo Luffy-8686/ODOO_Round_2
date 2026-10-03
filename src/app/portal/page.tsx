@@ -31,7 +31,31 @@ import {
   CreditCard,
   ChefHat,
   Send,
+  Sun,
+  Sunset,
+  Moon,
+  Filter,
 } from "lucide-react";
+
+const ALL_HOURLY_SLOTS = [
+  "06:00",
+  "07:00",
+  "08:00",
+  "09:00",
+  "10:00",
+  "11:00",
+  "12:00",
+  "13:00",
+  "14:00",
+  "15:00",
+  "16:00",
+  "17:00",
+  "18:00",
+  "19:00",
+  "20:00",
+  "21:00",
+  "22:00",
+];
 
 export default function MemberPortalPage({
   initialTab = "PASS",
@@ -41,19 +65,24 @@ export default function MemberPortalPage({
   const { currentUser } = useAuth();
   const [member, setMember] = useState<any>(null);
   const [courts, setCourts] = useState<any[]>([]);
+  const [dayBookings, setDayBookings] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [tables, setTables] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<"PASS" | "MY_BOOKINGS" | "BOOKINGS" | "CAFE" | "SHOP" | "TABS" | "INVOICES">(initialTab);
   const [bookingDate, setBookingDate] = useState(new Date().toISOString().split("T")[0]);
   const [bookingFilter, setBookingFilter] = useState<"ALL" | "UPCOMING" | "PAST" | "CANCELLED">("ALL");
+  const [selectedSportFilter, setSelectedSportFilter] = useState<string>("ALL");
+  const [selectedTimeOfDay, setSelectedTimeOfDay] = useState<string>("ALL");
   const [loading, setLoading] = useState(true);
 
   // Portal booking state
   const [bookingSuccess, setBookingSuccess] = useState<any>(null);
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [selectedBookingModal, setSelectedBookingModal] = useState<any>(null);
+  const [confirmSlotModal, setConfirmSlotModal] = useState<{ court: any; time: string } | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [isBookingSubmitting, setIsBookingSubmitting] = useState(false);
 
   // Bar & Cafe Ordering state
   const [cafeSubTab, setCafeSubTab] = useState<"MENU" | "TABLES" | "ORDERS">("MENU");
@@ -93,6 +122,7 @@ export default function MemberPortalPage({
 
       if (memData.member) setMember(memData.member);
       if (crtData.courts) setCourts(crtData.courts);
+      if (crtData.bookings) setDayBookings(crtData.bookings);
       if (prdData.products) setProducts(prdData.products);
       if (menuData.items) setMenuItems(menuData.items);
       if (tblData.tables) {
@@ -122,6 +152,7 @@ export default function MemberPortalPage({
   const handlePortalBooking = async (court: any, time: string) => {
     setBookingError(null);
     setBookingSuccess(null);
+    setIsBookingSubmitting(true);
 
     const slotStart = new Date(`${bookingDate}T${time}:00`);
 
@@ -148,10 +179,13 @@ export default function MemberPortalPage({
         setBookingError(data.error || "Booking failed");
       } else {
         setBookingSuccess(data.booking);
+        setConfirmSlotModal(null);
         await fetchMemberData();
       }
     } catch (err: any) {
       setBookingError(err.message);
+    } finally {
+      setIsBookingSubmitting(false);
     }
   };
 
@@ -179,6 +213,38 @@ export default function MemberPortalPage({
     } finally {
       setCancellingId(null);
     }
+  };
+
+  // Helper to check if a specific time slot is already booked on a court
+  const isSlotBooked = (courtId: string, timeStr: string) => {
+    const slotStart = new Date(`${bookingDate}T${timeStr}:00`);
+    return dayBookings.some((b: any) => {
+      if (b.courtId !== courtId) return false;
+      if (b.status === "CANCELLED") return false;
+      const bStart = new Date(b.startTime);
+      const bEnd = new Date(b.endTime);
+      return slotStart >= bStart && slotStart < bEnd;
+    });
+  };
+
+  const isSlotPast = (timeStr: string) => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    if (bookingDate !== todayStr) return false;
+    const [h, m] = timeStr.split(":").map(Number);
+    const now = new Date();
+    const slotDate = new Date();
+    slotDate.setHours(h, m, 0, 0);
+    return slotDate < now;
+  };
+
+  const getFilteredSlots = () => {
+    return ALL_HOURLY_SLOTS.filter((t) => {
+      const hour = parseInt(t.split(":")[0]);
+      if (selectedTimeOfDay === "MORNING") return hour >= 6 && hour < 12;
+      if (selectedTimeOfDay === "AFTERNOON") return hour >= 12 && hour < 17;
+      if (selectedTimeOfDay === "EVENING") return hour >= 17 && hour <= 22;
+      return true;
+    });
   };
 
   // Cart operations
@@ -322,6 +388,11 @@ export default function MemberPortalPage({
     return item.category === selectedMenuCategory;
   });
 
+  const filteredCourts = courts.filter((court) => {
+    if (selectedSportFilter === "ALL") return true;
+    return court.sport?.name?.toLowerCase() === selectedSportFilter.toLowerCase();
+  });
+
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
       {/* MEMBER PORTAL HEADER */}
@@ -368,11 +439,12 @@ export default function MemberPortalPage({
           </button>
           <button
             onClick={() => setActiveTab("BOOKINGS")}
-            className={`px-3 py-1.5 rounded-lg transition-all ${
+            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
               activeTab === "BOOKINGS" ? "bg-white dark:bg-slate-700 text-amber-600 shadow-xs font-bold" : "text-slate-600"
             }`}
           >
-            Book Court
+            <Calendar className="w-3.5 h-3.5" />
+            <span>Book Court</span>
           </button>
           <button
             onClick={() => setActiveTab("CAFE")}
@@ -782,31 +854,99 @@ export default function MemberPortalPage({
         </div>
       )}
 
-      {/* 3. RESERVE A COURT VIEW */}
+      {/* 3. RESERVE A COURT VIEW (COMPREHENSIVE HOURLY SLOTS) */}
       {activeTab === "BOOKINGS" && (
         <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+          {/* Header & Controls */}
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Reserve a Court Slot</h3>
-              <p className="text-xs text-slate-500">Pick your court, select date and time for 60 minutes play.</p>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Reserve a Court Slot</h3>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold uppercase">
+                  6:00 AM – 11:00 PM
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Full 60-minute bookable slots across all Tennis, Badminton, Padel & Cricket courts.
+              </p>
             </div>
-            <div className="flex items-center gap-3">
+
+            <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-between lg:justify-end">
               <button
                 onClick={() => setActiveTab("MY_BOOKINGS")}
                 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
               >
-                <span>View My Booked Slots ({upcomingCount})</span>
+                <span>My Booked Slots ({upcomingCount})</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
-              <input
-                type="date"
-                value={bookingDate}
-                onChange={(e) => setBookingDate(e.target.value)}
-                className="p-2 rounded-xl border bg-slate-50 dark:bg-slate-800 text-xs font-bold"
-              />
+
+              <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                <span className="text-[11px] font-bold text-slate-500 pl-2">Date:</span>
+                <input
+                  type="date"
+                  value={bookingDate}
+                  onChange={(e) => setBookingDate(e.target.value)}
+                  className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold"
+                />
+              </div>
             </div>
           </div>
 
+          {/* Time & Sport Filter Bars */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs">
+            {/* Sport Filter */}
+            <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1">
+                Sport:
+              </span>
+              {[
+                { id: "ALL", label: "All Courts" },
+                { id: "Tennis", label: "🎾 Tennis" },
+                { id: "Badminton", label: "🏸 Badminton" },
+                { id: "Padel", label: "🎾 Padel" },
+                { id: "Cricket", label: "🏏 Cricket" },
+              ].map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => setSelectedSportFilter(s.id)}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition-all whitespace-nowrap ${
+                    selectedSportFilter.toLowerCase() === s.id.toLowerCase()
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Time of Day Filter */}
+            <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1">
+                Time:
+              </span>
+              {[
+                { id: "ALL", label: "All Hours (06-23)", icon: Clock },
+                { id: "MORNING", label: "Morning (06-12)", icon: Sun },
+                { id: "AFTERNOON", label: "Afternoon (12-17)", icon: Sunset },
+                { id: "EVENING", label: "Evening (17-23) 💡", icon: Moon },
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setSelectedTimeOfDay(t.id)}
+                  className={`px-2.5 py-1 rounded-lg font-bold transition-all whitespace-nowrap flex items-center gap-1 ${
+                    selectedTimeOfDay === t.id
+                      ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
+                      : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                  }`}
+                >
+                  <span>{t.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Feedback alerts */}
           {bookingError && (
             <div className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
@@ -837,33 +977,107 @@ export default function MemberPortalPage({
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {courts.map((court) => (
-              <div
-                key={court.id}
-                className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-3 text-xs"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-sm text-slate-900 dark:text-white">{court.name}</span>
-                  <span>{court.sport?.icon}</span>
-                </div>
-                <div className="text-slate-500">
-                  {court.surfaceType} • Rate: {isGold ? "FREE" : formatINR(court.hourlyRatePaise / 2)}
-                </div>
+          {/* Courts Grid with Full Hourly Slots */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {filteredCourts.map((court) => {
+              const courtHourlyRate = isGold ? 0 : Math.round(court.hourlyRatePaise / 2);
+              const slotsToDisplay = getFilteredSlots();
 
-                <div className="grid grid-cols-3 gap-1.5 pt-2">
-                  {["07:00", "09:00", "16:00", "18:00", "19:30", "21:00"].map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => handlePortalBooking(court, t)}
-                      className="py-1.5 px-2 rounded-lg bg-white dark:bg-slate-700 hover:bg-emerald-600 hover:text-white text-slate-800 dark:text-slate-200 font-semibold text-[11px] border border-slate-200 dark:border-slate-600 transition-colors"
-                    >
-                      {t}
-                    </button>
-                  ))}
+              return (
+                <div
+                  key={court.id}
+                  className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 hover:border-emerald-400 dark:hover:border-emerald-600 transition-all space-y-4"
+                >
+                  {/* Court Header */}
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-2xl shrink-0">
+                        {court.sport?.icon || "🎾"}
+                      </div>
+                      <div>
+                        <h4 className="font-extrabold text-sm text-slate-900 dark:text-white">
+                          {court.name}
+                        </h4>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          {court.surfaceType} Surface • {court.isIndoor ? "Indoor" : "Outdoor"} • {court.sport?.name}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 block">
+                        {isGold ? "100% Free (Gold)" : formatINR(courtHourlyRate) + "/hr"}
+                      </span>
+                      <span className="text-[10px] text-slate-400">60 Min Sessions</span>
+                    </div>
+                  </div>
+
+                  {/* Hourly Slot Buttons (06:00 to 22:00) */}
+                  <div>
+                    <div className="flex items-center justify-between pb-2 text-[11px] font-bold text-slate-500">
+                      <span>Available 60-Minute Slots:</span>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {slotsToDisplay.filter((t) => !isSlotBooked(court.id, t) && !isSlotPast(t)).length} open slots
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
+                      {slotsToDisplay.map((t) => {
+                        const booked = isSlotBooked(court.id, t);
+                        const past = isSlotPast(t);
+                        const isEvening = parseInt(t.split(":")[0]) >= 18;
+
+                        if (booked) {
+                          return (
+                            <div
+                              key={t}
+                              className="py-1.5 px-1 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 text-center text-[10px] font-mono font-bold cursor-not-allowed select-none opacity-80"
+                              title="Slot already booked"
+                            >
+                              <span>{t}</span>
+                              <span className="block text-[8px] uppercase tracking-tighter opacity-80">Booked</span>
+                            </div>
+                          );
+                        }
+
+                        if (past) {
+                          return (
+                            <div
+                              key={t}
+                              className="py-1.5 px-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-400 text-center text-[10px] font-mono cursor-not-allowed select-none opacity-50"
+                              title="Slot time has passed"
+                            >
+                              <span>{t}</span>
+                              <span className="block text-[8px] uppercase tracking-tighter">Past</span>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <button
+                            key={t}
+                            onClick={() => setConfirmSlotModal({ court, time: t })}
+                            className={`py-1.5 px-1 rounded-lg font-bold text-[11px] font-mono transition-all text-center border relative group ${
+                              isEvening
+                                ? "bg-white dark:bg-slate-800 hover:bg-emerald-600 hover:text-white border-amber-300/80 dark:border-amber-700/60 text-slate-800 dark:text-slate-200 hover:border-emerald-600"
+                                : "bg-white dark:bg-slate-800 hover:bg-emerald-600 hover:text-white border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:border-emerald-600"
+                            }`}
+                          >
+                            <span>{t}</span>
+                            {isEvening && (
+                              <span className="absolute -top-1.5 -right-1 text-[9px] group-hover:hidden">💡</span>
+                            )}
+                            <span className="block text-[8px] text-emerald-600 dark:text-emerald-400 group-hover:text-white font-sans uppercase tracking-tight">
+                              Book
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -1118,7 +1332,7 @@ export default function MemberPortalPage({
                                 onClick={() => handleUpdateCartQty(item.menuItem.id, 1)}
                                 className="w-5 h-5 rounded flex items-center justify-center hover:bg-slate-300 dark:hover:bg-slate-600"
                               >
-                                <Plus className="w-3 h-3" />
+                                <Plus className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </div>
@@ -1450,6 +1664,87 @@ export default function MemberPortalPage({
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRM COURT SLOT BOOKING MODAL */}
+      {confirmSlotModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full border border-slate-200 dark:border-slate-800 p-6 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95">
+            <button
+              onClick={() => setConfirmSlotModal(null)}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-300 flex items-center justify-center text-2xl shrink-0 font-bold">
+                {confirmSlotModal.court.sport?.icon || "🎾"}
+              </div>
+              <div>
+                <h3 className="font-extrabold text-lg text-slate-900 dark:text-white">
+                  Confirm Court Reservation
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {confirmSlotModal.court.name} • {confirmSlotModal.court.surfaceType} Surface
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2.5 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Selected Date:</span>
+                <strong className="font-bold text-slate-900 dark:text-white">{formatDate(bookingDate)}</strong>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Slot Time:</span>
+                <strong className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+                  {confirmSlotModal.time} (60 Mins)
+                </strong>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500">Member Name:</span>
+                <span className="font-bold text-slate-900 dark:text-white">{member?.name || currentUser?.name}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-slate-200 dark:border-slate-700">
+                <span className="text-slate-500">Pricing / Tier Entitlement:</span>
+                <span className="font-extrabold text-sm text-emerald-600 dark:text-emerald-400">
+                  {isGold ? "100% Free (Gold Perk)" : formatINR(Math.round(confirmSlotModal.court.hourlyRatePaise / 2))}
+                </span>
+              </div>
+            </div>
+
+            {parseInt(confirmSlotModal.time.split(":")[0]) >= 18 && (
+              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300 flex items-center gap-2">
+                <Flame className="w-4 h-4 shrink-0 text-amber-500" />
+                <span>Evening peak slot: Court floodlights will be automatically scheduled!</span>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmSlotModal(null)}
+                className="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isBookingSubmitting}
+                onClick={() => handlePortalBooking(confirmSlotModal.court, confirmSlotModal.time)}
+                className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 disabled:opacity-50"
+              >
+                {isBookingSubmitting ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Check className="w-4 h-4" />
+                )}
+                <span>{isBookingSubmitting ? "Locking Slot..." : "Confirm & Book"}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
