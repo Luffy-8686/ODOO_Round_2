@@ -1,0 +1,768 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// -------------------------------------------------------------
+// USER & AUTHENTICATION
+// -------------------------------------------------------------
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  passwordHash  String?
+  role          String    @default("MEMBER") // OWNER, MANAGER, FRONT_DESK, BAR_STAFF, SHOP_STAFF, COACH, MEMBER
+  phone         String?
+  avatarUrl     String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  member        Member?
+  employee      Employee?
+  auditLogs     AuditLog[]
+  notifications Notification[]
+}
+
+// -------------------------------------------------------------
+// MEMBERS & PLANS
+// -------------------------------------------------------------
+model Plan {
+  id                    String   @id @default(cuid())
+  tier                  String   @unique // GOLD, SILVER, JUNIOR
+  name                  String
+  monthlyFeePaise       Int
+  annualFeePaise        Int
+  courtRatePerHourPaise Int
+  shopDiscountPercent   Int      @default(0)
+  barDiscountPercent    Int      @default(0)
+  maxBookingsPerDay     Int      @default(2)
+  advanceBookingDays    Int      @default(7)
+  description           String?
+  featuresJson          String   @default("[]")
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  memberships           Membership[]
+}
+
+model Member {
+  id                    String       @id @default(cuid())
+  memberId              String       @unique // e.g., CC-2024-001
+  userId                String?      @unique
+  user                  User?        @relation(fields: [userId], references: [id])
+  name                  String
+  email                 String       @unique
+  phone                 String       @unique
+  dateOfBirth           DateTime?
+  photoUrl              String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  status                String       @default("ACTIVE") // ACTIVE, EXPIRING_SOON, EXPIRED, SUSPENDED, CANCELLED
+  address               String?
+  notes                 String?
+  qrCodeData            String?
+  creditBalancePaise    Int          @default(0)
+  deletedAt             DateTime?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  memberships           Membership[]
+  bookings              Booking[]
+  waitlists             Waitlist[]
+  socialParticipants    SocialParticipant[]
+  shopOrders            ShopOrder[]
+  serviceJobs           ServiceJob[]
+  tabs                  Tab[]
+  invoices              Invoice[]
+  attendances           MemberAttendance[]
+  notifications         Notification[]
+}
+
+model Membership {
+  id              String    @id @default(cuid())
+  memberId        String
+  member          Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  planId          String
+  plan            Plan      @relation(fields: [planId], references: [id])
+  tier            String    // Denormalized: GOLD, SILVER, JUNIOR
+  startDate       DateTime
+  endDate         DateTime
+  billingCycle    String    @default("MONTHLY") // MONTHLY, ANNUAL
+  status          String    @default("ACTIVE") // ACTIVE, EXPIRING_SOON, EXPIRED, CANCELLED
+  autoRenew       Boolean   @default(true)
+  amountPaidPaise Int
+  paymentMethod   String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model MemberAttendance {
+  id            String    @id @default(cuid())
+  memberId      String
+  member        Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  checkInTime   DateTime  @default(now())
+  checkInMethod String    @default("DESK") // DESK, QR_SCAN, ACCESS_GATE
+  notes         String?
+}
+
+// -------------------------------------------------------------
+// COURT BOOKING ENGINE
+// -------------------------------------------------------------
+model Sport {
+  id          String   @id @default(cuid())
+  name        String   @unique // Tennis, Badminton, Padel, Cricket, etc.
+  icon        String?  // emoji or icon name
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  courts      Court[]
+}
+
+model Court {
+  id                String              @id @default(cuid())
+  sportId           String
+  sport             Sport               @relation(fields: [sportId], references: [id])
+  name              String
+  surfaceType       String              @default("Synthetic") // Clay, Synthetic, Grass, Hard, Glass
+  isIndoor          Boolean             @default(false)
+  status            String              @default("ACTIVE") // ACTIVE, MAINTENANCE
+  hourlyRatePaise   Int                 @default(80000) // ₹800 standard walk-in rate
+  openingHour       Int                 @default(6) // 6 AM
+  closingHour       Int                 @default(23) // 11 PM
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  bookings          Booking[]
+  socialSessions    SocialSession[]
+  maintenanceBlocks MaintenanceBlock[]
+  waitlists         Waitlist[]
+}
+
+model Booking {
+  id              String    @id @default(cuid())
+  bookingNumber   String    @unique // BK-2024-XXXX
+  courtId         String
+  court           Court     @relation(fields: [courtId], references: [id])
+  memberId        String?
+  member          Member?   @relation(fields: [memberId], references: [id])
+  bookerName      String
+  bookerPhone     String
+  bookerEmail     String
+  bookerType      String    // GOLD, SILVER, JUNIOR, WALK_IN, TRIAL
+  startTime       DateTime
+  endTime         DateTime
+  durationMinutes Int       @default(60)
+  status          String    @default("CONFIRMED") // PENDING, CONFIRMED, CANCELLED, COMPLETED, NO_SHOW
+  source          String    @default("FRONT_DESK") // FRONT_DESK, MEMBER_PORTAL, PUBLIC_TRIAL, PHONE
+  totalPricePaise Int
+  isPeak          Boolean   @default(false)
+  paymentStatus   String    @default("PAID") // UNPAID, PAID, REFUNDED, CHARGED_TO_TAB
+  paymentMethod   String?   // CASH, CARD, UPI, ONLINE, TAB_CHARGE, FREE_TIER
+  coachId         String?
+  notes           String?
+  expiresAt       DateTime? // For 10-minute unpaid reservations
+  cancelledAt     DateTime?
+  cancelReason    String?
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  payments        Payment[]
+}
+
+model SocialSession {
+  id                  String              @id @default(cuid())
+  courtId             String
+  court               Court               @relation(fields: [courtId], references: [id])
+  name                String              // e.g., "Friday Night Padel Social"
+  dayOfWeek           Int                 @default(5) // 5 = Friday
+  startTime           DateTime
+  endTime             DateTime
+  capacity            Int                 @default(12)
+  pricePerPersonPaise Int                 @default(30000) // ₹300
+  description         String?
+  status              String              @default("ACTIVE") // ACTIVE, CANCELLED, COMPLETED
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  participants        SocialParticipant[]
+}
+
+model SocialParticipant {
+  id              String        @id @default(cuid())
+  socialSessionId String
+  socialSession   SocialSession @relation(fields: [socialSessionId], references: [id], onDelete: Cascade)
+  memberId        String?
+  member          Member?       @relation(fields: [memberId], references: [id])
+  guestName       String
+  guestPhone      String
+  status          String        @default("CONFIRMED") // CONFIRMED, WAITLIST, CANCELLED
+  paidPaise       Int           @default(0)
+  createdAt       DateTime      @default(now())
+}
+
+model Waitlist {
+  id          String    @id @default(cuid())
+  courtId     String
+  court       Court     @relation(fields: [courtId], references: [id])
+  slotTime    DateTime
+  memberId    String?
+  member      Member?   @relation(fields: [memberId], references: [id])
+  name        String
+  phone       String
+  email       String
+  status      String    @default("WAITING") // WAITING, NOTIFIED, CONVERTED, EXPIRED
+  createdAt   DateTime  @default(now())
+}
+
+model MaintenanceBlock {
+  id          String   @id @default(cuid())
+  courtId     String
+  court       Court    @relation(fields: [courtId], references: [id])
+  startTime   DateTime
+  endTime     DateTime
+  reason      String
+  createdBy   String?
+  createdAt   DateTime @default(now())
+}
+
+// -------------------------------------------------------------
+// GEAR SHOP & INVENTORY
+// -------------------------------------------------------------
+model Product {
+  id              String           @id @default(cuid())
+  name            String
+  category        String           // RACKETS, BALLS, SHOES, APPAREL, ACCESSORIES
+  brand           String
+  sku             String           @unique
+  pricePaise      Int
+  costPricePaise  Int
+  taxRatePercent  Int              @default(18)
+  reorderLevel    Int              @default(5)
+  description     String?
+  imageUrl        String?
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  variants        ProductVariant[]
+}
+
+model ProductVariant {
+  id                 String              @id @default(cuid())
+  productId          String
+  product            Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku                String              @unique
+  size               String?
+  color              String?
+  weight             String?
+  stockQuantity      Int                 @default(0)
+  reservedQuantity   Int                 @default(0)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  stockMovements     StockMovement[]
+  orderItems         OrderItem[]
+  purchaseOrderItems PurchaseOrderItem[]
+}
+
+model StockMovement {
+  id               String         @id @default(cuid())
+  variantId        String
+  variant          ProductVariant @relation(fields: [variantId], references: [id])
+  type             String         // PURCHASE_RECEIVE, SALE_POS, SALE_ONLINE, ADJUSTMENT, RETURN
+  quantityChange   Int
+  previousQuantity Int
+  newQuantity      Int
+  reason           String?
+  referenceId      String?
+  staffUserId      String?
+  createdAt        DateTime       @default(now())
+}
+
+model Supplier {
+  id             String          @id @default(cuid())
+  name           String
+  contactPerson  String?
+  phone          String?
+  email          String?
+  address        String?
+  gstin          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  purchaseOrders PurchaseOrder[]
+}
+
+model PurchaseOrder {
+  id            String              @id @default(cuid())
+  supplierId    String
+  supplier      Supplier            @relation(fields: [supplierId], references: [id])
+  orderNumber   String              @unique // PO-2024-XXXX
+  status        String              @default("ORDERED") // DRAFT, ORDERED, RECEIVED, CANCELLED
+  totalCostPaise Int
+  notes         String?
+  expectedDate  DateTime?
+  receivedDate  DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  items         PurchaseOrderItem[]
+}
+
+model PurchaseOrderItem {
+  id               String         @id @default(cuid())
+  purchaseOrderId  String
+  purchaseOrder    PurchaseOrder  @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  variantId        String
+  variant          ProductVariant @relation(fields: [variantId], references: [id])
+  quantityOrdered  Int
+  quantityReceived Int            @default(0)
+  unitCostPaise    Int
+}
+
+model ShopOrder {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique // SO-2024-XXXX
+  memberId        String?
+  member          Member?     @relation(fields: [memberId], references: [id])
+  customerName    String
+  customerPhone   String
+  customerEmail   String?
+  fulfillmentType String      @default("CLICK_AND_COLLECT") // CLICK_AND_COLLECT, HOME_DELIVERY
+  deliveryAddress String?
+  status          String      @default("PLACED") // PLACED, PACKED, OUT_FOR_DELIVERY, DELIVERED, READY_FOR_PICKUP, COLLECTED, CANCELLED
+  totalPricePaise Int
+  discountPaise   Int         @default(0)
+  finalPricePaise Int
+  paymentStatus   String      @default("PAID") // PENDING, PAID, REFUNDED
+  paymentMethod   String?     // CASH, CARD, UPI, ONLINE, TAB_CHARGE
+  notes           String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  items           OrderItem[]
+  payments        Payment[]
+}
+
+model OrderItem {
+  id              String         @id @default(cuid())
+  shopOrderId     String
+  shopOrder       ShopOrder      @relation(fields: [shopOrderId], references: [id], onDelete: Cascade)
+  variantId       String
+  variant         ProductVariant @relation(fields: [variantId], references: [id])
+  quantity        Int
+  unitPricePaise  Int
+  totalPricePaise Int
+}
+
+model ServiceJob {
+  id            String    @id @default(cuid())
+  ticketNumber  String    @unique // ST-2024-XXXX
+  memberId      String?
+  member        Member?   @relation(fields: [memberId], references: [id])
+  customerName  String
+  customerPhone String
+  racketDetails String    // e.g. "Wilson Pro Staff 97"
+  stringType    String    // e.g. "Babolat RPM Blast 16"
+  tension       String    // e.g. "54 lbs"
+  isExpress     Boolean   @default(false)
+  status        String    @default("QUEUED") // QUEUED, IN_PROGRESS, READY, DELIVERED
+  costPaise     Int       @default(80000)
+  eta           DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// -------------------------------------------------------------
+// BAR & CAFETERIA
+// -------------------------------------------------------------
+model MenuItem {
+  id             String         @id @default(cuid())
+  name           String
+  category       String         // HOT_BEVERAGES, COLD_BEVERAGES, SNACKS, MEALS, DESSERTS, HEALTH_SHAKES
+  pricePaise     Int
+  costPaise      Int
+  taxRatePercent Int            @default(5)
+  isAvailable    Boolean        @default(true) // 86'd status toggle
+  description    String?
+  imageUrl       String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  orderItems     BarOrderItem[]
+}
+
+model Table {
+  id           String     @id @default(cuid())
+  tableNumber  Int        @unique
+  name         String     // Table 1, Poolside 2, Lounge A, etc.
+  capacity     Int        @default(4)
+  status       String     @default("FREE") // FREE, OCCUPIED, BILL_REQUESTED, RESERVED
+  currentTabId String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  tabs         Tab[]
+  orders       BarOrder[]
+}
+
+model Tab {
+  id                  String     @id @default(cuid())
+  tabNumber           String     @unique // TAB-2024-XXXX
+  tableId             String?
+  table               Table?     @relation(fields: [tableId], references: [id])
+  memberId            String?
+  member              Member?    @relation(fields: [memberId], references: [id])
+  guestName           String?
+  guestPhone          String?
+  status              String     @default("OPEN") // OPEN, CLOSED
+  openedAt            DateTime   @default(now())
+  closedAt            DateTime?
+  totalAmountPaise    Int        @default(0)
+  discountAmountPaise Int        @default(0)
+  finalAmountPaise    Int        @default(0)
+  openedByUserId      String?
+  closedByUserId      String?
+  notes               String?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  orders              BarOrder[]
+  payments            Payment[]
+}
+
+model BarOrder {
+  id          String         @id @default(cuid())
+  orderNumber String         @unique // BO-2024-XXXX
+  tabId       String?
+  tab         Tab?           @relation(fields: [tabId], references: [id])
+  tableId     String?
+  table       Table?         @relation(fields: [tableId], references: [id])
+  status      String         @default("NEW") // NEW, PREPARING, READY, SERVED, CANCELLED
+  notes       String?
+  staffUserId String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  items       BarOrderItem[]
+}
+
+model BarOrderItem {
+  id              String   @id @default(cuid())
+  barOrderId      String
+  barOrder        BarOrder @relation(fields: [barOrderId], references: [id], onDelete: Cascade)
+  menuItemId      String
+  menuItem        MenuItem @relation(fields: [menuItemId], references: [id])
+  quantity        Int
+  unitPricePaise  Int
+  totalPricePaise Int
+  notes           String?
+}
+
+model Shift {
+  id                  String    @id @default(cuid())
+  employeeId          String
+  employee            Employee  @relation(fields: [employeeId], references: [id])
+  role                String    // BAR_STAFF, FRONT_DESK, SHOP_STAFF
+  clockIn             DateTime  @default(now())
+  clockOut            DateTime?
+  openingFloatPaise   Int       @default(500000) // ₹5,000 opening cash drawer float
+  closingFloatPaise   Int?
+  actualCashCountPaise Int?
+  variancePaise       Int?
+  notes               String?
+  status              String    @default("OPEN") // OPEN, CLOSED
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+// -------------------------------------------------------------
+// FINANCE, INVOICING & LEDGER
+// -------------------------------------------------------------
+model Payment {
+  id             String    @id @default(cuid())
+  receiptNumber  String    @unique // RCP-2024-XXXX
+  amountPaise    Int
+  method         String    // CASH, CARD, UPI, ONLINE, TAB_CHARGE, MEMBER_CREDIT
+  status         String    @default("SUCCESS") // SUCCESS, PENDING, FAILED, REFUNDED
+  module         String    // COURT, MEMBERSHIP, SHOP, BAR, TRIAL, SERVICE
+  referenceId    String?
+  transactionRef String?
+  notes          String?
+  createdAt      DateTime  @default(now())
+
+  bookingId      String?
+  booking        Booking?  @relation(fields: [bookingId], references: [id])
+  shopOrderId    String?
+  shopOrder      ShopOrder? @relation(fields: [shopOrderId], references: [id])
+  tabId          String?
+  tab            Tab?      @relation(fields: [tabId], references: [id])
+  invoiceId      String?
+  invoice        Invoice?  @relation(fields: [invoiceId], references: [id])
+}
+
+model LedgerTransaction {
+  id            String   @id @default(cuid())
+  entryNumber   String   @unique // TX-2024-XXXX
+  date          DateTime @default(now())
+  description   String
+  module        String   // COURTS, MEMBERSHIPS, SHOP, BAR, EXPENSES, PAYROLL, REFUNDS
+  debitPaise    Int      @default(0) // Outflow / expense
+  creditPaise   Int      @default(0) // Inflow / revenue
+  paymentMethod String   @default("CASH")
+  taxAmountPaise Int     @default(0)
+  referenceType String?  // BOOKING, MEMBERSHIP, SHOP_ORDER, TAB, EXPENSE, PAYSLIP
+  referenceId   String?
+  createdAt     DateTime @default(now())
+}
+
+model Invoice {
+  id             String        @id @default(cuid())
+  invoiceNumber  String        @unique // INV-2024-XXXX
+  memberId       String?
+  member         Member?       @relation(fields: [memberId], references: [id])
+  clientName     String
+  clientGstin    String?
+  clientAddress  String?
+  issueDate      DateTime      @default(now())
+  dueDate        DateTime
+  subtotalPaise  Int
+  taxAmountPaise Int
+  cgstPaise      Int           @default(0)
+  sgstPaise      Int           @default(0)
+  totalPaise     Int
+  status         String        @default("PAID") // DRAFT, SENT, PAID, OVERDUE, CANCELLED
+  pdfUrl         String?
+  notes          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  lines          InvoiceLine[]
+  payments       Payment[]
+}
+
+model InvoiceLine {
+  id             String   @id @default(cuid())
+  invoiceId      String
+  invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description    String
+  quantity       Int      @default(1)
+  unitPricePaise Int
+  taxRatePercent Int      @default(18)
+  totalPaise     Int
+}
+
+model Vendor {
+  id            String    @id @default(cuid())
+  name          String
+  category      String    // UTILITIES, MAINTENANCE, SPORTING_GOODS, FOOD_BEVERAGE, RENT, MARKETING
+  contactPerson String?
+  phone         String?
+  email         String?
+  gstin         String?
+  address       String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  expenses      Expense[]
+}
+
+model Expense {
+  id            String    @id @default(cuid())
+  expenseNumber String    @unique // EXP-2024-XXXX
+  vendorId      String?
+  vendor        Vendor?   @relation(fields: [vendorId], references: [id])
+  category      String    // RENT, UTILITIES, SALARIES, EQUIPMENT, SUPPLIES, MAINTENANCE, MARKETING, OTHER
+  description   String
+  amountPaise   Int
+  taxPaise      Int       @default(0)
+  dueDate       DateTime?
+  paymentDate   DateTime?
+  paymentMethod String?   @default("BANK_TRANSFER")
+  status        String    @default("PAID") // DRAFT, APPROVED, PAID, OVERDUE
+  receiptUrl    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// -------------------------------------------------------------
+// HR & PAYROLL
+// -------------------------------------------------------------
+model Employee {
+  id                 String         @id @default(cuid())
+  employeeCode       String         @unique // EMP-001
+  userId             String?        @unique
+  user               User?          @relation(fields: [userId], references: [id])
+  name               String
+  role               String         // MANAGER, FRONT_DESK, BAR_STAFF, SHOP_STAFF, COACH, MAINTENANCE
+  phone              String
+  email              String         @unique
+  monthlySalaryPaise Int            @default(3500000) // ₹35,000
+  joinDate           DateTime       @default(now())
+  status             String         @default("ACTIVE") // ACTIVE, INACTIVE
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  shifts             Shift[]
+  attendances        Attendance[]
+  leaveRequests      LeaveRequest[]
+  payslips           Payslip[]
+}
+
+model Attendance {
+  id           String    @id @default(cuid())
+  employeeId   String
+  employee     Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date         DateTime  @default(now())
+  checkInTime  DateTime  @default(now())
+  checkOutTime DateTime?
+  status       String    @default("PRESENT") // PRESENT, HALF_DAY, ABSENT, LEAVE
+}
+
+model LeaveRequest {
+  id               String    @id @default(cuid())
+  employeeId       String
+  employee         Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveType        String    // CASUAL, SICK, PAID, UNPAID
+  startDate        DateTime
+  endDate          DateTime
+  reason           String
+  status           String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  approvedByUserId String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model Payroll {
+  id                    String    @id @default(cuid())
+  payrollNumber         String    @unique // PAY-2024-MM
+  month                 Int
+  year                  Int
+  totalBasePaise        Int
+  totalOvertimePaise    Int       @default(0)
+  totalDeductionsPaise  Int       @default(0)
+  totalNetPaise         Int
+  status                String    @default("PAID") // DRAFT, PROCESSED, PAID
+  processedDate         DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  payslips              Payslip[]
+}
+
+model Payslip {
+  id              String   @id @default(cuid())
+  payslipNumber   String   @unique // PS-2024-XXXX
+  payrollId       String
+  payroll         Payroll  @relation(fields: [payrollId], references: [id], onDelete: Cascade)
+  employeeId      String
+  employee        Employee @relation(fields: [employeeId], references: [id])
+  month           Int
+  year            Int
+  baseSalaryPaise Int
+  overtimePaise   Int      @default(0)
+  deductionsPaise Int      @default(0)
+  netSalaryPaise  Int
+  paymentDate     DateTime?
+  paymentMethod   String   @default("BANK_TRANSFER")
+  status          String   @default("PAID") // PENDING, PAID
+  createdAt       DateTime @default(now())
+}
+
+// -------------------------------------------------------------
+// CRM & PUBLIC ENQUIRIES
+// -------------------------------------------------------------
+model Lead {
+  id               String         @id @default(cuid())
+  leadNumber       String         @unique // LD-2024-XXXX
+  name             String
+  phone            String
+  email            String?
+  source           String         @default("WEBSITE") // WEBSITE, WALK_IN, REFERRAL, SOCIAL, PHONE
+  sportInterest    String?        // Tennis, Padel, Cricket, Badminton
+  status           String         @default("NEW") // NEW, CONTACTED, QUOTE_SENT, TRIAL_BOOKED, CONVERTED, LOST
+  notes            String?
+  assignedToUserId String?
+  lastContactedAt  DateTime?
+  convertedMemberId String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  activities       LeadActivity[]
+  quotes           Quote[]
+}
+
+model LeadActivity {
+  id                String   @id @default(cuid())
+  leadId            String
+  lead              Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type              String   // CALL, EMAIL, WHATSAPP, NOTE, STATUS_CHANGE, TRIAL_BOOKED, QUOTE_SENT
+  summary           String
+  details           String?
+  performedByUserId String?
+  createdAt         DateTime @default(now())
+}
+
+model Quote {
+  id               String   @id @default(cuid())
+  quoteNumber      String   @unique // QT-2024-XXXX
+  leadId           String
+  lead             Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  totalAmountPaise Int
+  validUntil       DateTime
+  status           String   @default("SENT") // DRAFT, SENT, ACCEPTED, EXPIRED
+  itemsJson        String   @default("[]")
+  pdfUrl           String?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// -------------------------------------------------------------
+// PLATFORM, NOTIFICATIONS & AUDIT LOGS
+// -------------------------------------------------------------
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  memberId  String?
+  member    Member?  @relation(fields: [memberId], references: [id])
+  type      String   // BOOKING_CONFIRMED, BOOKING_REMINDER, MEMBERSHIP_EXPIRING, LOW_STOCK, NEW_LEAD, ORDER_STATUS, TAB_ALERT
+  title     String
+  message   String
+  channel   String   @default("IN_APP") // IN_APP, EMAIL, SMS, WHATSAPP
+  status    String   @default("SENT") // SENT, READ, FAILED
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  userName    String   @default("System")
+  userRole    String   @default("SYSTEM")
+  action      String   // CREATE, UPDATE, DELETE, STATUS_CHANGE, PAYMENT, CHECK_IN
+  entity      String   // MEMBER, BOOKING, TAB, SHOP_ORDER, EXPENSE, INVOICE, LEAD
+  entityId    String
+  detailsJson String?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+}
+
+model Setting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  valueJson   String
+  description String?
+  updatedAt   DateTime @updatedAt
+}
