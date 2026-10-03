@@ -18,6 +18,7 @@ import {
   ChevronDown,
   RefreshCw,
   LogIn,
+  Sparkles,
 } from "lucide-react";
 
 export function Navbar() {
@@ -313,13 +314,22 @@ export function Navbar() {
               )}
             </div>
           ) : (
-            <Link
-              href="/login"
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all"
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>Sign In</span>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/login?tab=signin"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Sign In</span>
+              </Link>
+              <Link
+                href="/login?tab=signup"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Join Free</span>
+              </Link>
+            </div>
           )}
         </div>
       </div>

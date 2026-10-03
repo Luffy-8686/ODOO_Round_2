@@ -204,30 +204,28 @@ export default function PublicHomePage() {
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
+            <Link
+              href="/login?tab=signup"
+              className="px-6 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Create Free Account / Sign Up</span>
+            </Link>
             <button
               onClick={() => {
                 setShowTrialModal(true);
                 setTrialSuccess(false);
               }}
-              className="px-6 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+              className="px-6 py-3.5 rounded-xl bg-slate-800/90 hover:bg-slate-800 border border-slate-700 text-white font-semibold text-sm transition-all"
             >
               Book a Complimentary Trial
             </button>
             <a
               href="#plans"
-              className="px-6 py-3.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-white font-semibold text-sm transition-all"
+              className="px-6 py-3.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/40 text-amber-300 font-semibold text-sm transition-all"
             >
               Explore Membership Tiers
             </a>
-            <button
-              onClick={() => {
-                setShowQuoteModal(true);
-                setQuoteSuccess(false);
-              }}
-              className="px-6 py-3.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/40 text-amber-300 font-semibold text-sm transition-all"
-            >
-              Corporate & Event Packages
-            </button>
           </div>
 
           {/* Quick stats banner */}
@@ -389,8 +387,8 @@ export default function PublicHomePage() {
                   </div>
 
                   <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
-                    <button
-                      onClick={() => setShowTrialModal(true)}
+                    <Link
+                      href={`/login?tab=signup&tier=${plan.tier}`}
                       className={`w-full py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                         isGold
                           ? "bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-md shadow-amber-400/20"
@@ -399,7 +397,7 @@ export default function PublicHomePage() {
                     >
                       <span>Join as {plan.tier} Member</span>
                       <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
+                    </Link>
                   </div>
                 </div>
               );

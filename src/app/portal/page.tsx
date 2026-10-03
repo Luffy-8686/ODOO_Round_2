@@ -152,12 +152,67 @@ export default function MemberPortalPage({
   const membership = member?.memberships?.[0];
   const plan = membership?.plan;
   const isGold = plan?.tier === "GOLD";
-  const advanceDays = plan?.advanceBookingDays ?? (isGold ? 14 : plan?.tier === "SILVER" ? 7 : plan?.tier === "JUNIOR" ? 7 : 7);
+  const advanceDays = plan?.advanceBookingDays ?? (isGold ? 14 : plan?.tier === "SILVER" ? 7 : plan?.tier === "JUNIOR" ? 7 : 3);
 
   const todayStr = new Date().toISOString().split("T")[0];
   const maxAllowedDate = new Date();
   maxAllowedDate.setDate(maxAllowedDate.getDate() + advanceDays);
   const maxAllowedDateStr = maxAllowedDate.toISOString().split("T")[0];
+
+  // Expiry Tracking & Calculations
+  const daysUntilExpiry = membership?.endDate
+    ? Math.ceil((new Date(membership.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : 999;
+  const isExpiringSoon = daysUntilExpiry <= 5 && daysUntilExpiry >= 0 && plan?.tier !== "FREE";
+  const isExpired = daysUntilExpiry < 0 && plan?.tier !== "FREE";
+  const isFreeTier = plan?.tier === "FREE" || !plan?.tier || plan?.tier === "WALK_IN";
+
+  // Tier Upgrade State
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [selectedUpgradeTier, setSelectedUpgradeTier] = useState<"GOLD" | "SILVER" | "JUNIOR">("GOLD");
+  const [upgradeBillingCycle, setUpgradeBillingCycle] = useState<"MONTHLY" | "ANNUAL">("ANNUAL");
+  const [upgradePaymentMethod, setUpgradePaymentMethod] = useState<string>("UPI");
+  const [isUpgrading, setIsUpgrading] = useState(false);
+  const [upgradeSuccessMsg, setUpgradeSuccessMsg] = useState<string | null>(null);
+  const [upgradeErrorMsg, setUpgradeErrorMsg] = useState<string | null>(null);
+
+  const handleUpgradeTier = async () => {
+    if (!member) return;
+    setIsUpgrading(true);
+    setUpgradeErrorMsg(null);
+    setUpgradeSuccessMsg(null);
+
+    try {
+      const res = await fetch("/api/members/upgrade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          memberId: member.id,
+          targetTier: selectedUpgradeTier,
+          billingCycle: upgradeBillingCycle,
+          paymentMethod: upgradePaymentMethod,
+          userId: currentUser?.id,
+          userName: currentUser?.name,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setUpgradeErrorMsg(data.error || "Failed to upgrade membership.");
+      } else {
+        setUpgradeSuccessMsg(`🎉 Successfully upgraded to ${selectedUpgradeTier} Tier!`);
+        setTimeout(() => {
+          setShowUpgradeModal(false);
+          setUpgradeSuccessMsg(null);
+        }, 2000);
+        await fetchMemberData();
+      }
+    } catch (err: any) {
+      setUpgradeErrorMsg(err.message || "Failed to complete membership upgrade.");
+    } finally {
+      setIsUpgrading(false);
+    }
+  };
 
   const handlePortalBooking = async (court: any, time: string) => {
     setBookingError(null);
@@ -415,24 +470,97 @@ export default function MemberPortalPage({
 
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
+      {/* 5-DAY MEMBERSHIP EXPIRY WARNING ALERT */}
+      {isExpiringSoon && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-500/40 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md shadow-amber-500/5">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-xl shrink-0 shadow-md shadow-amber-500/20">
+              ⚠️
+            </div>
+            <div>
+              <p className="font-bold text-sm">
+                Membership Expiring in {daysUntilExpiry === 0 ? "Today" : `${daysUntilExpiry} Days`}!
+              </p>
+              <p className="text-xs text-amber-800 dark:text-amber-300 mt-0.5">
+                Your <strong>{plan?.name || "Tier Membership"}</strong> is valid until <strong>{formatDate(membership.endDate)}</strong>. Renew or upgrade now to retain 100% free court access and discounts.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              setSelectedUpgradeTier("GOLD");
+              setShowUpgradeModal(true);
+            }}
+            className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shrink-0 shadow-sm transition-all"
+          >
+            Renew / Upgrade Plan &rarr;
+          </button>
+        </div>
+      )}
+
+      {/* EXPIRED MEMBERSHIP BANNER */}
+      {isExpired && (
+        <div className="p-4 rounded-2xl bg-red-500/10 border-2 border-red-500/40 dark:bg-red-950/40 text-red-900 dark:text-red-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md shadow-red-500/5">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-red-500 text-white flex items-center justify-center font-black text-xl shrink-0">
+              ⛔
+            </div>
+            <div>
+              <p className="font-bold text-sm">Membership Expired on {formatDate(membership.endDate)}</p>
+              <p className="text-xs text-red-800 dark:text-red-300 mt-0.5">
+                Your tier privileges have expired. Court bookings are currently charged at standard walk-in rates.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              setSelectedUpgradeTier("GOLD");
+              setShowUpgradeModal(true);
+            }}
+            className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shrink-0 shadow-sm transition-all"
+          >
+            Renew Membership &rarr;
+          </button>
+        </div>
+      )}
+
       {/* MEMBER PORTAL HEADER */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-amber-500 text-slate-950 flex items-center justify-center font-black text-lg shadow-md shadow-amber-500/20">
+          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg shadow-md ${
+            isGold ? "bg-amber-500 text-slate-950 shadow-amber-500/20" : isFreeTier ? "bg-slate-700 text-white" : "bg-emerald-600 text-white"
+          }`}>
             {member?.name ? member.name.slice(0, 2).toUpperCase() : "CC"}
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span>{member?.name || currentUser?.name || "Member"}</span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold uppercase">
-                {plan?.tier || "GOLD"} TIER
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold text-slate-900 dark:text-white">
+                {member?.name || currentUser?.name || "Member"}
+              </h1>
+              <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase ${
+                isGold
+                  ? "bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300"
+                  : isFreeTier
+                  ? "bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                  : "bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300"
+              }`}>
+                {plan?.tier || "FREE"} TIER
               </span>
-            </h1>
+            </div>
             <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
               Member ID: {member?.memberId || currentUser?.memberCode || "CC-2024-001"}
             </span>
           </div>
         </div>
+
+        {/* Upgrade Tier Button in Header */}
+        <button
+          onClick={() => setShowUpgradeModal(true)}
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 transition-all cursor-pointer"
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>{isFreeTier ? "Upgrade to Gold / Silver" : "Change / Upgrade Tier"}</span>
+        </button>
 
         {/* Tab Navigation */}
         <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold overflow-x-auto w-full sm:w-auto">
@@ -516,7 +644,11 @@ export default function MemberPortalPage({
               className={`p-6 rounded-3xl relative overflow-hidden shadow-2xl flex flex-col justify-between h-80 text-white ${
                 isGold
                   ? "bg-gradient-to-br from-amber-600 via-amber-700 to-slate-900 border border-amber-400/40"
-                  : "bg-gradient-to-br from-slate-700 via-slate-800 to-slate-950 border border-slate-600"
+                  : plan?.tier === "SILVER"
+                  ? "bg-gradient-to-br from-slate-600 via-slate-700 to-slate-950 border border-slate-400/40"
+                  : plan?.tier === "JUNIOR"
+                  ? "bg-gradient-to-br from-teal-700 via-emerald-800 to-slate-950 border border-teal-400/40"
+                  : "bg-gradient-to-br from-slate-800 via-slate-900 to-slate-950 border border-emerald-500/30"
               }`}
             >
               <div className="flex items-center justify-between">
@@ -524,9 +656,11 @@ export default function MemberPortalPage({
                   <span className="text-[10px] tracking-widest uppercase font-bold text-amber-200">
                     The Champions Club
                   </span>
-                  <h3 className="text-xl font-extrabold tracking-tight">{plan?.name || "Gold All-Access"}</h3>
+                  <h3 className="text-xl font-extrabold tracking-tight">
+                    {plan?.name || (isFreeTier ? "Free Community Guest" : "Gold All-Access")}
+                  </h3>
                 </div>
-                <span className="text-2xl">👑</span>
+                <span className="text-2xl">{isGold ? "👑" : isFreeTier ? "🎟️" : "⭐"}</span>
               </div>
 
               <div className="flex items-center justify-between">
@@ -542,7 +676,9 @@ export default function MemberPortalPage({
 
               <div className="pt-3 border-t border-white/20 flex items-center justify-between text-[11px]">
                 <span>Valid Until: <strong>{membership?.endDate ? formatDate(membership.endDate) : "—"}</strong></span>
-                <span className="px-2 py-0.5 rounded bg-emerald-500/30 text-emerald-200 font-bold uppercase">
+                <span className={`px-2 py-0.5 rounded font-bold uppercase ${
+                  isFreeTier ? "bg-slate-500/30 text-slate-200" : "bg-emerald-500/30 text-emerald-200"
+                }`}>
                   {member?.status || "ACTIVE"}
                 </span>
               </div>
@@ -550,20 +686,32 @@ export default function MemberPortalPage({
 
             {/* PLAN ENTITLEMENTS & PRIVILEGES */}
             <div className="md:col-span-2 p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 text-xs">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Your Tier Privileges & Daily Quotas</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Your Tier Privileges & Daily Quotas</h3>
+                {isFreeTier && (
+                  <button
+                    onClick={() => setShowUpgradeModal(true)}
+                    className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
+                  >
+                    <span>Upgrade for 100% Free Courts</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
                   <span className="text-emerald-700 dark:text-emerald-300 font-bold block">Court Access</span>
                   <span className="font-extrabold text-sm text-emerald-950 dark:text-emerald-100">
-                    {plan?.courtRatePerHourPaise === 0 ? "100% Complimentary" : `${formatINR(plan?.courtRatePerHourPaise || 0)}/hr`}
+                    {plan?.courtRatePerHourPaise === 0 ? "100% Complimentary" : `${formatINR(plan?.courtRatePerHourPaise || 80000)}/hr`}
                   </span>
-                  <span className="text-[10px] text-emerald-600 block mt-0.5">Max {plan?.maxBookingsPerDay || 2} bookings/day</span>
+                  <span className="text-[10px] text-emerald-600 block mt-0.5">Max {plan?.maxBookingsPerDay || 1} booking/day</span>
                 </div>
 
                 <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800">
                   <span className="text-purple-700 dark:text-purple-300 font-bold block">Pro Shop Discount</span>
                   <span className="font-extrabold text-sm text-purple-950 dark:text-purple-100">
-                    {plan?.shopDiscountPercent || 15}% Off All Gear
+                    {plan?.shopDiscountPercent || 0}% Off All Gear
                   </span>
                   <span className="text-[10px] text-purple-600 block mt-0.5">Auto-applied at checkout</span>
                 </div>
@@ -571,7 +719,7 @@ export default function MemberPortalPage({
                 <div className="p-3 rounded-xl bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800">
                   <span className="text-orange-700 dark:text-orange-300 font-bold block">Lounge & Bar Discount</span>
                   <span className="font-extrabold text-sm text-orange-950 dark:text-orange-100">
-                    {plan?.barDiscountPercent || 20}% Off F&B
+                    {plan?.barDiscountPercent || 0}% Off F&B
                   </span>
                   <span className="text-[10px] text-orange-600 block mt-0.5">Applied on running tab</span>
                 </div>
@@ -579,11 +727,32 @@ export default function MemberPortalPage({
                 <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800">
                   <span className="text-blue-700 dark:text-blue-300 font-bold block">Advance Booking</span>
                   <span className="font-extrabold text-sm text-blue-950 dark:text-blue-100">
-                    {plan?.advanceBookingDays || 14} Days in Advance
+                    {advanceDays} Days in Advance
                   </span>
                   <span className="text-[10px] text-blue-600 block mt-0.5">Priority slot selection</span>
                 </div>
               </div>
+
+              {/* Free Tier Upgrade Promo Banner */}
+              {isFreeTier && (
+                <div className="p-3.5 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-600/10 to-transparent border border-amber-500/30 flex items-center justify-between gap-3">
+                  <div>
+                    <span className="font-bold text-slate-900 dark:text-white block">Unlock All-Access Gold Perks</span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Get 100% free courts, 14-day booking window, 20% Bar discount & locker access.
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setSelectedUpgradeTier("GOLD");
+                      setShowUpgradeModal(true);
+                    }}
+                    className="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shrink-0 shadow-xs cursor-pointer"
+                  >
+                    Upgrade Now
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1944,6 +2113,211 @@ export default function MemberPortalPage({
                 className="flex-1 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-orange-600/20 disabled:opacity-50"
               >
                 {reservingTableLoading ? "Reserving..." : "Confirm Table"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MEMBERSHIP TIER UPGRADE MODAL */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full border border-slate-200 dark:border-slate-800 p-6 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95 my-8">
+            <button
+              onClick={() => {
+                setShowUpgradeModal(false);
+                setUpgradeErrorMsg(null);
+                setUpgradeSuccessMsg(null);
+              }}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Modal Header */}
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-600 text-slate-950 flex items-center justify-center text-xl font-bold shrink-0 shadow-md shadow-amber-500/20">
+                👑
+              </div>
+              <div>
+                <h3 className="font-extrabold text-lg text-slate-900 dark:text-white">
+                  Upgrade Membership Tier
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Select your desired tier to unlock free court access, discounts & priority booking.
+                </p>
+              </div>
+            </div>
+
+            {upgradeErrorMsg && (
+              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                <span>{upgradeErrorMsg}</span>
+              </div>
+            )}
+
+            {upgradeSuccessMsg && (
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{upgradeSuccessMsg}</span>
+              </div>
+            )}
+
+            {/* Tier Selection Cards */}
+            <div className="space-y-3">
+              {[
+                {
+                  tier: "GOLD" as const,
+                  name: "Gold All-Access Tier",
+                  icon: "👑",
+                  badge: "Most Popular",
+                  monthlyPaise: 500000,
+                  annualPaise: 5000000,
+                  benefits: ["100% Free Courts (All Sports)", "14-Day Advance Booking Window", "20% Bar & Cafe Discount", "15% Pro Shop Discount"],
+                },
+                {
+                  tier: "SILVER" as const,
+                  name: "Silver Standard Tier",
+                  icon: "🥈",
+                  monthlyPaise: 250000,
+                  annualPaise: 2500000,
+                  benefits: ["50% Off Court Rates", "7-Day Advance Booking Window", "10% Bar & Cafe Discount", "10% Pro Shop Discount"],
+                },
+                {
+                  tier: "JUNIOR" as const,
+                  name: "Junior Academy (<18)",
+                  icon: "🧒",
+                  monthlyPaise: 150000,
+                  annualPaise: 1500000,
+                  benefits: ["60% Off Off-Peak Courts", "7-Day Advance Booking Window", "15% Cafe Discount", "Academy Coaching Perks"],
+                },
+              ].map((t) => {
+                const isSelected = selectedUpgradeTier === t.tier;
+                return (
+                  <div
+                    key={t.tier}
+                    onClick={() => setSelectedUpgradeTier(t.tier)}
+                    className={`p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+                      isSelected
+                        ? "border-amber-500 bg-amber-50/50 dark:bg-amber-950/20 shadow-md shadow-amber-500/5"
+                        : "border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{t.icon}</span>
+                        <div>
+                          <span className="font-extrabold text-sm text-slate-900 dark:text-white block">
+                            {t.name}
+                          </span>
+                          {t.badge && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
+                              {t.badge}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="font-extrabold text-sm text-slate-900 dark:text-white block">
+                          {formatINR(upgradeBillingCycle === "ANNUAL" ? t.annualPaise : t.monthlyPaise)}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          {upgradeBillingCycle === "ANNUAL" ? "/ year" : "/ month"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-1 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 text-[11px] text-slate-600 dark:text-slate-300">
+                      {t.benefits.map((b, idx) => (
+                        <div key={idx} className="flex items-center gap-1">
+                          <Check className="w-3 h-3 text-emerald-600 shrink-0" />
+                          <span className="truncate">{b}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Billing Cycle Toggle */}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs">
+              <span className="font-bold text-slate-700 dark:text-slate-300">Billing Cycle:</span>
+              <div className="flex bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setUpgradeBillingCycle("MONTHLY")}
+                  className={`px-3 py-1 rounded font-bold text-xs transition-all ${
+                    upgradeBillingCycle === "MONTHLY"
+                      ? "bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-xs"
+                      : "text-slate-500"
+                  }`}
+                >
+                  Monthly
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUpgradeBillingCycle("ANNUAL")}
+                  className={`px-3 py-1 rounded font-bold text-xs transition-all flex items-center gap-1 ${
+                    upgradeBillingCycle === "ANNUAL"
+                      ? "bg-amber-500 text-slate-950 font-black shadow-xs"
+                      : "text-slate-500"
+                  }`}
+                >
+                  <span>Annual (Save 17%)</span>
+                  <span className="text-[9px]">🎁</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Payment Method Selector */}
+            <div>
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
+                Payment Method:
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: "UPI", label: "📱 UPI / QR" },
+                  { id: "CARD", label: "💳 Card" },
+                  { id: "NETBANKING", label: "🏦 NetBanking" },
+                ].map((pm) => (
+                  <button
+                    key={pm.id}
+                    type="button"
+                    onClick={() => setUpgradePaymentMethod(pm.id)}
+                    className={`p-2.5 rounded-xl border text-xs font-bold text-center transition-all ${
+                      upgradePaymentMethod === pm.id
+                        ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300"
+                        : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400"
+                    }`}
+                  >
+                    {pm.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setShowUpgradeModal(false)}
+                className="flex-1 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isUpgrading}
+                onClick={handleUpgradeTier}
+                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-amber-500/25 disabled:opacity-50 cursor-pointer"
+              >
+                {isUpgrading ? (
+                  <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4" />
+                )}
+                <span>{isUpgrading ? "Processing Upgrade..." : `Pay & Activate ${selectedUpgradeTier}`}</span>
               </button>
             </div>
           </div>
