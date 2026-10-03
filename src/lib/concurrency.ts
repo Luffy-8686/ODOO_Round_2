@@ -178,12 +178,6 @@ export async function createCourtBookingAtomic(input: CreateBookingInput) {
   const duration = input.durationMinutes || 60;
   const end = new Date(start.getTime() + duration * 60000);
 
-  // 0. HARD PAST DATE GUARD (Prevent booking court slots in the past, with 5-minute clock drift buffer)
-  const now = new Date();
-  if (start.getTime() < now.getTime() - 5 * 60 * 1000) {
-    throw new Error("Cannot book court slots in the past.");
-  }
-
   const mutex = getCourtMutex(input.courtId);
   const releaseLock = await mutex.acquire();
 
@@ -203,7 +197,6 @@ export async function createCourtBookingAtomic(input: CreateBookingInput) {
       // 2. Determine booker type and verify active membership
       let bookerType = input.bookerType || "WALK_IN";
       let activeTier = "WALK_IN";
-      let activePlan: any = null;
 
       if (input.memberId) {
         const member = await tx.member.findUnique({
@@ -221,25 +214,10 @@ export async function createCourtBookingAtomic(input: CreateBookingInput) {
           // Expired or suspended members lose member pricing and revert to WALK_IN
           if (member.status === "ACTIVE" && member.memberships.length > 0) {
             const activeMembership = member.memberships[0];
-            activePlan = activeMembership.plan;
-            activeTier = activePlan.tier;
+            activeTier = activeMembership.plan.tier;
             bookerType = activeTier as any;
           } else {
             bookerType = "WALK_IN";
-          }
-
-          // 2b. Advance Booking Days Window Enforcement (for Member Portal & Member bookings)
-          if (input.source === "MEMBER_PORTAL") {
-            const advanceDays = activePlan?.advanceBookingDays ?? (activeTier === "GOLD" ? 14 : activeTier === "SILVER" ? 7 : activeTier === "JUNIOR" ? 7 : 7);
-            const maxAllowedDate = new Date();
-            maxAllowedDate.setDate(maxAllowedDate.getDate() + advanceDays);
-            maxAllowedDate.setHours(23, 59, 59, 999);
-
-            if (start.getTime() > maxAllowedDate.getTime()) {
-              throw new Error(
-                `Advance booking window exceeded: Your ${activeTier} plan permits booking up to ${advanceDays} days in advance.`
-              );
-            }
           }
 
           // 3. Quota check for members (max 2 per day)

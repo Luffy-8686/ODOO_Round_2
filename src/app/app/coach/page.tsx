@@ -56,27 +56,30 @@ export default function CoachDashboardPage() {
   ];
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto font-sans">
       {/* HEADER */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 border-b border-[#E5DFD5] dark:border-[#222D3E]">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              Coach Coaching & Drills Command
-            </h1>
-            <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300 font-bold border border-cyan-300 dark:border-cyan-800">
-              🎾 COACH PORTAL
+          <div className="flex items-center gap-2.5">
+            <span className="text-[10px] uppercase tracking-[0.25em] font-bold text-[#8C6D23] dark:text-[#DFCA9B]">
+              Athletic Coaching & Development
+            </span>
+            <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-[#C5A059]/15 text-[#8C6D23] dark:text-[#DFCA9B] border border-[#C5A059]/30 font-bold uppercase tracking-wider">
+              Faculty Dossier
             </span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Personal training schedule, student player roster, skill development tracking, and court assignments.
+          <h1 className="text-2xl md:text-3xl font-serif font-bold text-[#0B1320] dark:text-white tracking-tight mt-1">
+            Academy Drills & Training Command
+          </h1>
+          <p className="text-xs text-[#5A6578] dark:text-[#8E9CAE] mt-1">
+            Personal coaching timetable, student player roster, skill progression tracking, and court assignments.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <Link
             href="/app/coach/courts"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold shadow-md shadow-cyan-600/20 transition-all"
+            className="flex items-center gap-2 px-4 py-2 rounded bg-[#921111] hover:bg-[#720C0C] text-white text-xs font-bold uppercase tracking-wider shadow-sm transition-all"
           >
             <Calendar className="w-3.5 h-3.5" />
             <span>Court Timetable</span>
@@ -86,64 +89,71 @@ export default function CoachDashboardPage() {
 
       {/* KPI TILES */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-cyan-200 dark:border-cyan-900/40 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-            <span className="text-xs font-semibold uppercase tracking-wider">Today&apos;s Training Sessions</span>
-            <Clock className="w-5 h-5 text-cyan-600" />
+        <div className="p-5 rounded-xl bg-white dark:bg-[#0E1726] border border-[#E5DFD5] dark:border-[#222D3E] shadow-sm">
+          <div className="flex items-center justify-between text-[#5A6578] dark:text-[#8E9CAE]">
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em]">Today&apos;s Training Sessions</span>
+            <Clock className="w-4 h-4 text-[#8C6D23] dark:text-[#DFCA9B]" />
           </div>
-          <div className="text-2xl font-black text-slate-900 dark:text-white mt-2">3 Sessions</div>
-          <p className="text-[11px] text-cyan-600 font-semibold mt-2">Center Court (Clay) & Padel 1</p>
+          <div className="text-3xl font-serif font-bold text-[#0B1320] dark:text-white mt-2">3 Sessions</div>
+          <p className="text-xs text-[#8C6D23] dark:text-[#DFCA9B] font-medium mt-1">Center Court (Clay) & Padel 1</p>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-cyan-200 dark:border-cyan-900/40 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-            <span className="text-xs font-semibold uppercase tracking-wider">Enrolled Trainees</span>
-            <Users className="w-5 h-5 text-cyan-600" />
+        <div className="p-5 rounded-xl bg-white dark:bg-[#0E1726] border border-[#E5DFD5] dark:border-[#222D3E] shadow-sm">
+          <div className="flex items-center justify-between text-[#5A6578] dark:text-[#8E9CAE]">
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em]">Enrolled Trainees</span>
+            <Users className="w-4 h-4 text-[#8C6D23] dark:text-[#DFCA9B]" />
           </div>
-          <div className="text-2xl font-black text-slate-900 dark:text-white mt-2">{students.length} Students</div>
-          <p className="text-[11px] text-slate-400 mt-2">Junior Development & Gold Elite</p>
+          <div className="text-3xl font-serif font-bold text-[#0B1320] dark:text-white mt-2">{students.length} Athletes</div>
+          <p className="text-xs text-[#5A6578] dark:text-[#8E9CAE] mt-1">Junior Development & Gold Elite</p>
         </div>
 
-        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-cyan-200 dark:border-cyan-900/40 shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-            <span className="text-xs font-semibold uppercase tracking-wider">Next Session</span>
-            <Sparkles className="w-5 h-5 text-amber-500" />
+        <div className="p-5 rounded-xl bg-white dark:bg-[#0E1726] border border-[#E5DFD5] dark:border-[#222D3E] shadow-sm">
+          <div className="flex items-center justify-between text-[#5A6578] dark:text-[#8E9CAE]">
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em]">Next Upcoming Slot</span>
+            <Sparkles className="w-4 h-4 text-[#C5A059]" />
           </div>
-          <div className="text-lg font-black text-slate-900 dark:text-white mt-2">05:00 PM (Junior)</div>
-          <p className="text-[11px] text-emerald-600 font-semibold mt-2">Rohan Kapoor • Clay Court</p>
+          <div className="text-xl font-serif font-bold text-[#0B1320] dark:text-white mt-2">05:00 PM (Junior)</div>
+          <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium mt-1">Rohan Kapoor • Clay Court</p>
         </div>
       </div>
 
       {/* TODAY'S SESSIONS LIST */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+      <div className="p-6 rounded-xl bg-white dark:bg-[#0E1726] border border-[#E5DFD5] dark:border-[#222D3E] shadow-sm space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-bold text-slate-900 dark:text-white">Scheduled Coaching Sessions Today</h3>
-          <span className="text-xs text-slate-400 font-mono">3 Registered Slots</span>
+          <div>
+            <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-[#8C6D23] dark:text-[#DFCA9B] block">
+              Daily Schedule
+            </span>
+            <h3 className="text-base font-serif font-bold text-[#0B1320] dark:text-white">
+              Scheduled Coaching Sessions Today
+            </h3>
+          </div>
+          <span className="text-xs text-[#8E9CAE] font-mono">3 Registered Slots</span>
         </div>
 
         <div className="space-y-3">
           {todaySessions.map((sess) => (
             <div
               key={sess.id}
-              className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+              className="p-4 rounded-lg border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#131C2E] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs hover:border-[#C5A059]/60 transition-all"
             >
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono font-bold text-cyan-700 dark:text-cyan-300">{sess.time}</span>
-                  <span className="font-extrabold text-slate-900 dark:text-white text-sm">{sess.studentName}</span>
-                  <span className="px-2 py-0.2 rounded font-mono font-bold uppercase text-[9px] bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                <div className="flex items-center gap-2.5">
+                  <span className="font-mono font-bold text-[#921111] dark:text-[#DFCA9B]">{sess.time}</span>
+                  <span className="font-serif font-bold text-base text-[#0B1320] dark:text-white">{sess.studentName}</span>
+                  <span className="px-2 py-0.5 rounded font-mono font-bold uppercase text-[9px] bg-[#C5A059]/15 text-[#8C6D23] dark:text-[#DFCA9B] border border-[#C5A059]/30">
                     {sess.tier}
                   </span>
                 </div>
-                <p className="text-slate-600 dark:text-slate-300 mt-1 font-medium">🎯 {sess.focus}</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">📍 {sess.court}</p>
+                <p className="text-[#0B1320] dark:text-[#DFCA9B] mt-1 font-medium">🎯 {sess.focus}</p>
+                <p className="text-[11px] text-[#5A6578] dark:text-[#8E9CAE] mt-0.5">📍 {sess.court}</p>
               </div>
 
               <span
-                className={`self-start sm:self-center px-3 py-1 rounded-full font-bold uppercase text-[10px] ${
+                className={`self-start sm:self-center px-3 py-1 rounded font-bold uppercase text-[10px] tracking-wider border ${
                   sess.status === "COMPLETED"
-                    ? "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300"
-                    : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                    ? "bg-[#E5DFD5]/50 text-[#5A6578] border-[#E5DFD5] dark:bg-[#222D3E] dark:text-[#8E9CAE] dark:border-[#222D3E]"
+                    : "bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800"
                 }`}
               >
                 {sess.status}
@@ -154,11 +164,21 @@ export default function CoachDashboardPage() {
       </div>
 
       {/* STUDENT ROSTER PREVIEW */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+      <div className="p-6 rounded-xl bg-white dark:bg-[#0E1726] border border-[#E5DFD5] dark:border-[#222D3E] shadow-sm space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-bold text-slate-900 dark:text-white">Active Student Player Roster</h3>
-          <Link href="/app/coach/students" className="text-xs font-bold text-cyan-600 hover:underline">
-            View All Students →
+          <div>
+            <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-[#8C6D23] dark:text-[#DFCA9B] block">
+              Trainee Directory
+            </span>
+            <h3 className="text-base font-serif font-bold text-[#0B1320] dark:text-white">
+              Active Student Athlete Roster
+            </h3>
+          </div>
+          <Link
+            href="/app/coach/students"
+            className="text-xs font-bold uppercase tracking-wider text-[#921111] dark:text-[#DFCA9B] hover:underline"
+          >
+            View Full Directory →
           </Link>
         </div>
 
@@ -166,14 +186,14 @@ export default function CoachDashboardPage() {
           {students.slice(0, 6).map((student) => (
             <div
               key={student.id}
-              className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 space-y-1 text-xs"
+              className="p-4 rounded-lg border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#131C2E] space-y-1 text-xs hover:border-[#C5A059]/60 transition-all"
             >
               <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-900 dark:text-white">{student.name}</span>
-                <span className="font-mono font-bold text-[10px] text-emerald-600">{student.memberId}</span>
+                <span className="font-serif font-bold text-sm text-[#0B1320] dark:text-white">{student.name}</span>
+                <span className="font-mono font-bold text-[10px] text-[#8C6D23] dark:text-[#DFCA9B]">{student.memberId}</span>
               </div>
-              <p className="text-[11px] text-slate-400">{student.phone}</p>
-              <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-50 dark:bg-cyan-950 text-cyan-700 dark:text-cyan-300">
+              <p className="text-[11px] text-[#5A6578] dark:text-[#8E9CAE]">{student.phone}</p>
+              <span className="inline-block mt-1 text-[9px] font-bold px-2 py-0.5 rounded bg-[#C5A059]/15 text-[#8C6D23] dark:text-[#DFCA9B] border border-[#C5A059]/30 uppercase tracking-wider">
                 Academy Trainee
               </span>
             </div>

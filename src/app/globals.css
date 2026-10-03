@@ -1,37 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400;1,600&family=Poppins:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: #f8fafc;
-    --foreground: #0f172a;
-    --card: #ffffff;
-    --card-foreground: #0f172a;
-    --primary: #16a34a;
-    --primary-foreground: #ffffff;
-    --border: #e2e8f0;
+    --background: #FAF8F5;
+    --foreground: #111827;
+    --card: #FFFFFF;
+    --card-foreground: #111827;
+    --primary: #921111;
+    --primary-foreground: #FFFFFF;
+    --border: #E5DFD5;
+    --accent-gold: #C5A059;
+    --accent-navy: #0B1320;
+    --heading-font: 'Playfair Display', Georgia, Cambria, 'Times New Roman', serif;
+    --body-font: 'Montserrat', 'Poppins', system-ui, -apple-system, sans-serif;
   }
 
   .dark {
-    --background: #090d16;
-    --foreground: #f8fafc;
-    --card: #111827;
-    --card-foreground: #f8fafc;
-    --primary: #22c55e;
-    --primary-foreground: #090d16;
-    --border: #1f2937;
+    --background: #080D14;
+    --foreground: #F3F4F6;
+    --card: #0E1522;
+    --card-foreground: #F3F4F6;
+    --primary: #A81E24;
+    --primary-foreground: #FFFFFF;
+    --border: #222D3E;
+    --accent-gold: #D4AF37;
+    --accent-navy: #060A10;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    color: var(--foreground);
+    background: var(--background);
+    font-family: var(--body-font);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--heading-font);
+    letter-spacing: -0.01em;
+  }
+
+  ::selection {
+    background-color: #921111;
+    color: #FFFFFF;
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* Custom Scrollbars */
+/* Custom Scrollbars in NYAC Classic Brass & Stone */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -42,12 +65,39 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+  background: #D8CFBF;
+  border-radius: 3px;
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: #374151;
+  background: #2D3748;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #C5A059;
+}
+
+/* NYAC UI Component Utility Classes */
+@layer components {
+  .nyac-gold-divider {
+    @apply w-14 h-0.5 bg-[#C5A059] mx-auto my-3;
+  }
+
+  .nyac-card {
+    @apply bg-white dark:bg-[#0E1522] border border-[#E5DFD5] dark:border-[#222D3E] shadow-sm transition-all;
+  }
+
+  .nyac-badge-gold {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[#FAF7EE] text-[#8C6D23] border border-[#DFCA9B] dark:bg-[#1E190E] dark:text-[#E3CEA4] dark:border-[#524424];
+  }
+
+  .nyac-badge-crimson {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[#FDF4F4] text-[#921111] border border-[#F8CCCC] dark:bg-[#200A0C] dark:text-[#F39A9D] dark:border-[#581A1D];
+  }
+
+  .nyac-badge-navy {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[#F1F4F9] text-[#0B1320] border border-[#CCD7E5] dark:bg-[#0B1320] dark:text-[#CBD5E1] dark:border-[#26354D];
+  }
 }
 
 /* Print Styles for Invoices, Receipts, and Reports */

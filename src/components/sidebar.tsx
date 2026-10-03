@@ -87,11 +87,11 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 min-h-[calc(100vh-4rem)] p-4 flex flex-col justify-between shrink-0">
+    <aside className="w-64 border-r border-[#E5DFD5] dark:border-[#1F293D] bg-[#FAF8F5] dark:bg-[#0B1320] min-h-[calc(100vh-4.5rem)] p-4 flex flex-col justify-between shrink-0 transition-colors">
       <div className="space-y-1">
-        <div className="px-3 py-2 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center justify-between">
+        <div className="px-3 py-2 text-[9px] font-bold text-[#8C6D23] dark:text-[#DFCA9B] uppercase tracking-[0.22em] flex items-center justify-between">
           <span>Operations Modules</span>
-          <span className="font-mono text-[9px] px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">
+          <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-[#FAF7EE] dark:bg-[#1C1608] border border-[#DFCA9B] dark:border-[#4B3C18] text-[#8C6D23]">
             {currentUser?.role || "PORTAL"}
           </span>
         </div>
@@ -107,26 +107,26 @@ export function Sidebar() {
             <Link
               key={link.href}
               href={link.href}
-              className={`flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`flex items-center justify-between px-3 py-2.5 rounded-md text-xs font-semibold tracking-wide transition-all ${
                 isActive
-                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
+                  ? "bg-[#921111] text-white shadow-sm"
                   : hasAccess
-                  ? "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                  : "text-slate-400 dark:text-slate-600 opacity-50 hover:opacity-80 cursor-not-allowed"
+                  ? "text-[#374151] dark:text-[#D1D5DB] hover:bg-[#E5DFD5]/40 dark:hover:bg-[#162032] hover:text-[#921111] dark:hover:text-[#FAF8F5]"
+                  : "text-[#9CA3AF] dark:text-[#4B5563] opacity-40 hover:opacity-60 cursor-not-allowed"
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Icon className={`w-4 h-4 ${isActive ? "text-white" : hasAccess ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"}`} />
-                <span className={!hasAccess ? "line-through text-slate-400 dark:text-slate-600" : ""}>{link.label}</span>
+                <Icon className={`w-4 h-4 ${isActive ? "text-[#C5A059]" : hasAccess ? "text-[#8C6D23] dark:text-[#DFCA9B]" : "text-[#9CA3AF]"}`} />
+                <span className={!hasAccess ? "line-through text-[#9CA3AF]" : ""}>{link.label}</span>
               </div>
               {!hasAccess ? (
-                <Lock className="w-3 h-3 text-slate-400" />
+                <Lock className="w-3 h-3 text-[#9CA3AF]" />
               ) : link.badge ? (
                 <span
-                  className={`text-[10px] px-1.5 py-0.5 rounded font-mono uppercase ${
+                  className={`text-[9px] px-1.5 py-0.5 rounded font-mono uppercase font-bold tracking-wider ${
                     isActive
-                      ? "bg-emerald-700/50 text-emerald-100"
-                      : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                      ? "bg-[#720C0C] text-[#DFCA9B] border border-[#A81E24]"
+                      : "bg-[#E5DFD5]/50 dark:bg-[#1E293B] text-[#6B7280] dark:text-[#9CA3AF] border border-[#D8CFBF] dark:border-[#334155]"
                   }`}
                 >
                   {link.badge}
@@ -138,13 +138,13 @@ export function Sidebar() {
       </div>
 
       {/* Role badge card */}
-      <div className="mt-8 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 text-xs">
+      <div className="mt-8 p-3 rounded-lg bg-white dark:bg-[#0E1522] border border-[#E5DFD5] dark:border-[#222D3E] text-xs shadow-sm">
         <div className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-          <span className="font-semibold text-slate-800 dark:text-slate-200">System Online</span>
+          <div className="w-2 h-2 rounded-full bg-[#C5A059] animate-pulse" />
+          <span className="font-serif font-bold text-[#0B1320] dark:text-white uppercase tracking-wider text-[11px]">Quarters Connected</span>
         </div>
-        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-          Logged in as <strong className="text-slate-700 dark:text-slate-300">{currentUser?.name || "User"}</strong> (
+        <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] mt-1">
+          Authenticated: <strong className="text-[#0B1320] dark:text-[#FAF8F5]">{currentUser?.name || "User"}</strong> (
           {currentUser?.role || "GUEST"})
         </p>
       </div>

@@ -62,43 +62,43 @@ export default function FrontDeskCsvImportPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-[#E5DFD5] dark:border-[#223042]">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              Bulk Member CSV Migration Wizard
+          <div className="flex items-center gap-2.5">
+            <h1 className="font-serif text-2xl font-bold text-[#0B1320] dark:text-[#FAF8F5] tracking-tight">
+              Bulk Member Ingestion Wizard
             </h1>
-            <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 font-bold">
-              📥 DATA INGESTION
+            <span className="text-[10px] font-mono tracking-widest uppercase px-2.5 py-1 rounded bg-[#C5A059]/15 text-[#8C6D2D] dark:text-[#C5A059] border border-[#C5A059]/30 font-bold">
+              DATA INGESTION
             </span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Bulk onboard club members from legacy spreadsheets, validating DOBs, tiers, emergency contacts & QR generation.
+          <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 font-sans">
+            Bulk onboard club members from institutional rosters, validating DOBs, tiers, emergency contacts & digital QR passes.
           </p>
         </div>
 
         <Link
           href="/app/desk/members"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800"
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#E5DFD5] dark:border-[#223042] text-xs font-serif uppercase tracking-wider font-semibold text-[#0B1320] dark:text-[#FAF8F5] hover:border-[#C5A059] transition-colors"
         >
-          <span>Return to Member Directory</span>
-          <ArrowRight className="w-3.5 h-3.5" />
+          <span>Member Roster</span>
+          <ArrowRight className="w-3.5 h-3.5 text-[#C5A059]" />
         </Link>
       </div>
 
       {result && (
-        <div className="p-6 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 space-y-3">
-          <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-bold text-sm">
+        <div className="p-6 rounded-xl bg-[#C5A059]/10 border border-[#C5A059]/30 space-y-3">
+          <div className="flex items-center gap-2 text-[#0B1320] dark:text-[#FAF8F5] font-serif font-bold text-base">
             <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-            <span>CSV Ingestion Completed Successfully!</span>
+            <span>CSV Ingestion Completed Successfully</span>
           </div>
-          <p className="text-xs text-emerald-700 dark:text-emerald-400">
-            Imported <strong>{result.importedCount || result.createdCount || preview?.length || 4}</strong> new club members.
-            All member codes, digital QR passes, and login credentials have been provisioned.
+          <p className="text-xs text-stone-600 dark:text-stone-300">
+            Imported <strong>{result.importedCount || result.createdCount || preview?.length || 4}</strong> distinguished members.
+            All member codes, digital QR passes, and credentials have been provisioned in the ledger.
           </p>
           <Link
             href="/app/desk/members"
-            className="inline-block px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs"
+            className="inline-block px-4 py-2 rounded-xl bg-[#921111] hover:bg-[#7A0E0E] text-white font-serif uppercase tracking-wider text-xs font-bold shadow-xs transition-colors"
           >
             View in Member Directory
           </Link>
@@ -106,21 +106,21 @@ export default function FrontDeskCsvImportPage() {
       )}
 
       {errorMsg && (
-        <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 flex items-center gap-3 text-rose-800 dark:text-rose-300 text-xs">
-          <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-600" />
+        <div className="p-4 rounded-xl bg-[#921111]/10 border border-[#921111]/25 flex items-center gap-3 text-[#921111] dark:text-[#e05252] text-xs">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       {/* CSV EDITOR & CONTROLS */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white">CSV Data Input</h3>
+      <div className="p-6 rounded-xl bg-white dark:bg-[#0F1923] border border-[#E5DFD5] dark:border-[#223042] shadow-xs space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-[#E5DFD5] dark:border-[#223042]">
+          <h3 className="font-serif text-base font-bold text-[#0B1320] dark:text-[#FAF8F5]">Institutional CSV Data Input</h3>
           <button
             onClick={() => setCsvText(SAMPLE_CSV)}
-            className="text-xs text-purple-600 font-semibold hover:underline"
+            className="text-xs text-[#921111] dark:text-[#C5A059] font-serif uppercase tracking-wider font-bold hover:underline"
           >
-            Load Sample Format
+            Load NYAC Sample Format
           </button>
         </div>
 
@@ -128,58 +128,58 @@ export default function FrontDeskCsvImportPage() {
           rows={8}
           value={csvText}
           onChange={(e) => setCsvText(e.target.value)}
-          className="w-full p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 font-mono text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="w-full p-3.5 rounded-xl border border-[#E5DFD5] dark:border-[#223042] bg-[#FAF8F5] dark:bg-[#162232] font-mono text-xs text-[#0B1320] dark:text-[#FAF8F5] focus:outline-none focus:border-[#C5A059]"
         />
 
         <div className="flex items-center gap-3">
           <button
             onClick={handlePreview}
-            className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold"
+            className="px-4 py-2 rounded-xl border border-[#E5DFD5] dark:border-[#223042] bg-[#FAF8F5] dark:bg-[#162232] hover:border-[#C5A059] text-xs font-serif uppercase tracking-wider font-bold transition-colors"
           >
-            Parse & Preview
+            Parse & Validate Records
           </button>
           <button
             onClick={handleExecuteImport}
             disabled={loading}
-            className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-md shadow-purple-600/20 disabled:opacity-50"
+            className="px-5 py-2 rounded-xl bg-[#921111] hover:bg-[#7A0E0E] text-white text-xs font-serif uppercase tracking-wider font-bold shadow-xs disabled:opacity-50 transition-colors"
           >
-            {loading ? "Importing Records..." : "Execute Bulk Migration"}
+            {loading ? "Importing Roster..." : "Execute Bulk Migration"}
           </button>
         </div>
       </div>
 
       {/* PREVIEW TABLE */}
       {preview && (
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-          <h3 className="text-base font-bold text-slate-900 dark:text-white">
-            Parsed Records Preview ({preview.length} rows)
+        <div className="p-6 rounded-xl bg-white dark:bg-[#0F1923] border border-[#E5DFD5] dark:border-[#223042] shadow-xs space-y-4">
+          <h3 className="font-serif text-base font-bold text-[#0B1320] dark:text-[#FAF8F5]">
+            Parsed Records Verification ({preview.length} candidates)
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
-              <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 font-bold border-b">
+              <thead className="bg-[#FAF8F5] dark:bg-[#162232] text-stone-500 font-mono text-[10px] uppercase tracking-wider border-b border-[#E5DFD5] dark:border-[#223042]">
                 <tr>
-                  <th className="p-3">Name</th>
-                  <th className="p-3">Email</th>
-                  <th className="p-3">Phone</th>
-                  <th className="p-3">DOB</th>
-                  <th className="p-3">Tier</th>
-                  <th className="p-3">Emergency Contact</th>
+                  <th className="p-3.5">Candidate Name</th>
+                  <th className="p-3.5">Email</th>
+                  <th className="p-3.5">Phone</th>
+                  <th className="p-3.5">Date of Birth</th>
+                  <th className="p-3.5">Tier</th>
+                  <th className="p-3.5">Emergency Contact</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              <tbody className="divide-y divide-[#E5DFD5] dark:divide-[#223042] font-medium">
                 {preview.map((row, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                    <td className="p-3 font-bold">{row.name}</td>
-                    <td className="p-3 text-slate-500">{row.email}</td>
-                    <td className="p-3">{row.phone}</td>
-                    <td className="p-3 font-mono">{row.dob}</td>
-                    <td className="p-3">
-                      <span className="px-2 py-0.5 rounded font-mono font-bold uppercase text-[10px] bg-amber-100 text-amber-800">
+                  <tr key={idx} className="hover:bg-[#FAF8F5] dark:hover:bg-[#162232]/50 transition-colors">
+                    <td className="p-3.5 font-serif font-bold text-sm text-[#0B1320] dark:text-[#FAF8F5]">{row.name}</td>
+                    <td className="p-3.5 text-stone-500 font-mono text-[11px]">{row.email}</td>
+                    <td className="p-3.5 font-mono">{row.phone}</td>
+                    <td className="p-3.5 font-mono text-stone-500">{row.dob}</td>
+                    <td className="p-3.5">
+                      <span className="px-2.5 py-0.5 rounded font-mono font-bold uppercase text-[10px] tracking-wider bg-[#C5A059]/15 text-[#8C6D2D] dark:text-[#C5A059] border border-[#C5A059]/30">
                         {row.tier}
                       </span>
                     </td>
-                    <td className="p-3 text-slate-500">
-                      {row.emergencyName} ({row.emergencyPhone})
+                    <td className="p-3.5 text-stone-500">
+                      {row.emergencyName} <span className="font-mono text-[11px]">({row.emergencyPhone})</span>
                     </td>
                   </tr>
                 ))}

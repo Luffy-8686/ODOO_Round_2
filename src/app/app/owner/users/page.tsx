@@ -138,26 +138,26 @@ export default function OwnerUsersManagementPage() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-[#E5DFD5] dark:border-[#223042]">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              User & Role Management
+          <div className="flex items-center gap-2.5">
+            <h1 className="font-serif text-2xl font-bold text-[#0B1320] dark:text-[#FAF8F5] tracking-tight">
+              Executive User Governance & Roles
             </h1>
-            <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 font-bold border border-purple-300 dark:border-purple-800">
-              🛡️ RBAC CONTROLLER
+            <span className="text-[10px] font-mono tracking-widest uppercase px-2.5 py-1 rounded bg-[#921111]/10 text-[#921111] dark:text-[#e05252] border border-[#921111]/25 font-bold">
+              RBAC CONTROLLER
             </span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Server-enforced role assignments, user lifecycle status, and security audit log integration.
+          <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 font-sans">
+            Server-enforced role assignments, user lifecycle status, and security audit trail integration.
           </p>
         </div>
 
         <button
           onClick={() => setIsCreateOpen(!isCreateOpen)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-md shadow-purple-600/20 transition-all"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#921111] hover:bg-[#7A0E0E] text-white text-xs font-serif uppercase tracking-wider font-semibold shadow-xs transition-colors"
         >
-          <UserPlus className="w-4 h-4" />
+          <UserPlus className="w-3.5 h-3.5" />
           <span>Provision New User</span>
         </button>
       </div>
@@ -167,7 +167,7 @@ export default function OwnerUsersManagementPage() {
           className={`p-4 rounded-xl flex items-center justify-between text-xs font-semibold ${
             message.type === "success"
               ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
-              : "bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
+              : "bg-[#921111]/10 text-[#921111] dark:text-[#e05252] border border-[#921111]/25"
           }`}
         >
           <div className="flex items-center gap-2">
@@ -182,15 +182,15 @@ export default function OwnerUsersManagementPage() {
 
       {/* CREATE USER ACCORDION */}
       {isCreateOpen && (
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-purple-200 dark:border-purple-900/50 shadow-lg space-y-4 animate-in fade-in slide-in-from-top-4 duration-200">
-          <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <UserPlus className="w-4 h-4 text-purple-600" />
-            Provision System User with Assigned Role
+        <div className="p-6 rounded-xl bg-white dark:bg-[#0F1923] border border-[#E5DFD5] dark:border-[#223042] shadow-xs space-y-4 animate-in fade-in slide-in-from-top-4 duration-200">
+          <h3 className="font-serif text-base font-bold text-[#0B1320] dark:text-[#FAF8F5] flex items-center gap-2">
+            <UserPlus className="w-4 h-4 text-[#C5A059]" />
+            Provision System User with Assigned Privilege Role
           </h3>
 
           <form onSubmit={handleCreateUser} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
             <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+              <label className="block font-serif font-bold text-[10px] uppercase tracking-wider text-stone-600 dark:text-stone-300 mb-1">
                 Full Name
               </label>
               <input
@@ -199,12 +199,12 @@ export default function OwnerUsersManagementPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Ramesh Chandra"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs"
+                className="w-full px-3 py-2 rounded-lg border border-[#E5DFD5] dark:border-[#223042] bg-[#FAF8F5] dark:bg-[#162232] text-xs text-[#0B1320] dark:text-[#FAF8F5] focus:outline-none focus:border-[#C5A059]"
               />
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+              <label className="block font-serif font-bold text-[10px] uppercase tracking-wider text-stone-600 dark:text-stone-300 mb-1">
                 Email Address
               </label>
               <input
@@ -213,18 +213,18 @@ export default function OwnerUsersManagementPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="e.g. ramesh@championsclub.in"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs"
+                className="w-full px-3 py-2 rounded-lg border border-[#E5DFD5] dark:border-[#223042] bg-[#FAF8F5] dark:bg-[#162232] text-xs text-[#0B1320] dark:text-[#FAF8F5] focus:outline-none focus:border-[#C5A059]"
               />
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+              <label className="block font-serif font-bold text-[10px] uppercase tracking-wider text-stone-600 dark:text-stone-300 mb-1">
                 Assigned Role
               </label>
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value as Role)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-semibold"
+                className="w-full px-3 py-2 rounded-lg border border-[#E5DFD5] dark:border-[#223042] bg-[#FAF8F5] dark:bg-[#162232] text-xs font-semibold text-[#0B1320] dark:text-[#FAF8F5] focus:outline-none focus:border-[#C5A059]"
               >
                 {ROLES.map((r) => (
                   <option key={r} value={r}>
@@ -235,7 +235,7 @@ export default function OwnerUsersManagementPage() {
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+              <label className="block font-serif font-bold text-[10px] uppercase tracking-wider text-stone-600 dark:text-stone-300 mb-1">
                 Password
               </label>
               <input
@@ -244,12 +244,12 @@ export default function OwnerUsersManagementPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Initial password"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs"
+                className="w-full px-3 py-2 rounded-lg border border-[#E5DFD5] dark:border-[#223042] bg-[#FAF8F5] dark:bg-[#162232] text-xs text-[#0B1320] dark:text-[#FAF8F5] focus:outline-none focus:border-[#C5A059]"
               />
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+              <label className="block font-serif font-bold text-[10px] uppercase tracking-wider text-stone-600 dark:text-stone-300 mb-1">
                 Phone Number
               </label>
               <input
@@ -257,7 +257,7 @@ export default function OwnerUsersManagementPage() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+91 98765 00000"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-xs"
+                className="w-full px-3 py-2 rounded-lg border border-[#E5DFD5] dark:border-[#223042] bg-[#FAF8F5] dark:bg-[#162232] text-xs text-[#0B1320] dark:text-[#FAF8F5] focus:outline-none focus:border-[#C5A059]"
               />
             </div>
 
@@ -265,14 +265,14 @@ export default function OwnerUsersManagementPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="flex-1 py-2 px-4 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-md shadow-purple-600/20 disabled:opacity-50"
+                className="flex-1 py-2 px-4 rounded-lg bg-[#921111] hover:bg-[#7A0E0E] text-white font-serif uppercase tracking-wider text-xs font-bold shadow-xs disabled:opacity-50 transition-colors"
               >
                 {submitting ? "Provisioning..." : "Create User"}
               </button>
               <button
                 type="button"
                 onClick={() => setIsCreateOpen(false)}
-                className="py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 text-xs"
+                className="py-2 px-3 rounded-lg border border-[#E5DFD5] dark:border-[#223042] text-stone-600 dark:text-stone-300 hover:bg-[#FAF8F5] dark:hover:bg-[#162232] font-serif uppercase tracking-wider text-xs font-semibold"
               >
                 Cancel
               </button>
@@ -282,24 +282,24 @@ export default function OwnerUsersManagementPage() {
       )}
 
       {/* FILTER & SEARCH BAR */}
-      <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row gap-3 items-center justify-between">
+      <div className="p-4 rounded-xl bg-white dark:bg-[#0F1923] border border-[#E5DFD5] dark:border-[#223042] shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between">
         <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+          <Search className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by name, email, or phone..."
-            className="w-full pl-9 pr-4 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs text-slate-900 dark:text-white"
+            className="w-full pl-9 pr-4 py-2 rounded-lg border border-[#E5DFD5] dark:border-[#223042] bg-[#FAF8F5] dark:bg-[#162232] text-xs text-[#0B1320] dark:text-[#FAF8F5] focus:outline-none focus:border-[#C5A059]"
           />
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Filter className="w-4 h-4 text-slate-400" />
+          <Filter className="w-4 h-4 text-stone-400" />
           <select
             value={selectedRoleFilter}
             onChange={(e) => setSelectedRoleFilter(e.target.value)}
-            className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-900 dark:text-white"
+            className="px-3 py-2 rounded-lg border border-[#E5DFD5] dark:border-[#223042] bg-[#FAF8F5] dark:bg-[#162232] text-xs font-semibold text-[#0B1320] dark:text-[#FAF8F5]"
           >
             <option value="ALL">All Roles ({users.length})</option>
             {ROLES.map((r) => (
@@ -312,7 +312,7 @@ export default function OwnerUsersManagementPage() {
           <button
             onClick={fetchUsers}
             title="Reload Users"
-            className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
+            className="p-2 rounded-lg border border-[#E5DFD5] dark:border-[#223042] bg-[#FAF8F5] dark:bg-[#162232] hover:bg-[#E5DFD5] text-stone-500 transition-colors"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -320,23 +320,23 @@ export default function OwnerUsersManagementPage() {
       </div>
 
       {/* USERS TABLE */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
+      <div className="p-6 rounded-xl bg-white dark:bg-[#0F1923] border border-[#E5DFD5] dark:border-[#223042] shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-xs text-left">
-            <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 font-bold border-b border-slate-200 dark:border-slate-800 uppercase tracking-wider">
+            <thead className="bg-[#FAF8F5] dark:bg-[#162232] text-stone-500 font-mono text-[10px] uppercase tracking-wider border-b border-[#E5DFD5] dark:border-[#223042]">
               <tr>
-                <th className="p-3">User & Contact</th>
-                <th className="p-3">Current Role</th>
-                <th className="p-3">Linked Profile</th>
-                <th className="p-3">Status</th>
-                <th className="p-3">Created</th>
-                <th className="p-3 text-right">Actions</th>
+                <th className="p-3.5">User & Contact</th>
+                <th className="p-3.5">Assigned Role</th>
+                <th className="p-3.5">Linked Profile</th>
+                <th className="p-3.5">Status</th>
+                <th className="p-3.5">Created</th>
+                <th className="p-3.5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+            <tbody className="divide-y divide-[#E5DFD5] dark:divide-[#223042] font-medium">
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-slate-400">
+                  <td colSpan={6} className="p-8 text-center text-stone-400 font-mono italic">
                     No users found matching query.
                   </td>
                 </tr>
@@ -344,20 +344,18 @@ export default function OwnerUsersManagementPage() {
                 filteredUsers.map((u) => {
                   const meta = ROLE_METADATA[u.role as Role];
                   return (
-                    <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                      <td className="p-3">
-                        <div className="font-bold text-slate-900 dark:text-white text-sm">{u.name}</div>
-                        <div className="text-slate-400 text-[11px]">{u.email}</div>
-                        {u.phone && <div className="text-slate-400 text-[10px]">{u.phone}</div>}
+                    <tr key={u.id} className="hover:bg-[#FAF8F5] dark:hover:bg-[#162232]/50 transition-colors">
+                      <td className="p-3.5">
+                        <div className="font-serif font-bold text-sm text-[#0B1320] dark:text-[#FAF8F5]">{u.name}</div>
+                        <div className="text-stone-400 font-mono text-[11px] mt-0.5">{u.email}</div>
+                        {u.phone && <div className="text-stone-400 font-mono text-[10px]">{u.phone}</div>}
                       </td>
 
-                      <td className="p-3">
+                      <td className="p-3.5">
                         <select
                           value={u.role}
                           onChange={(e) => handleRoleChange(u.id, e.target.value as Role)}
-                          className={`font-bold px-2 py-1 rounded-lg border text-xs cursor-pointer ${
-                            meta?.badgeClass || "bg-slate-100 text-slate-700"
-                          }`}
+                          className="font-mono font-bold text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-md border border-[#E5DFD5] dark:border-[#223042] bg-[#FAF8F5] dark:bg-[#162232] text-stone-700 dark:text-stone-300 cursor-pointer focus:outline-none focus:border-[#C5A059]"
                         >
                           {ROLES.map((r) => (
                             <option key={r} value={r}>
@@ -367,45 +365,45 @@ export default function OwnerUsersManagementPage() {
                         </select>
                       </td>
 
-                      <td className="p-3">
+                      <td className="p-3.5">
                         {u.member ? (
                           <div>
-                            <span className="font-mono font-bold text-emerald-600">{u.member.memberId}</span>
-                            <span className="block text-[10px] text-slate-400">
+                            <span className="font-mono font-bold text-[#C5A059]">{u.member.memberId}</span>
+                            <span className="block text-[10px] text-stone-400 font-serif">
                               {u.member.memberships?.[0]?.plan?.name || u.member.status}
                             </span>
                           </div>
                         ) : u.employee ? (
                           <div>
-                            <span className="font-mono font-bold text-blue-600">{u.employee.employeeCode}</span>
-                            <span className="block text-[10px] text-slate-400">Staff Employee</span>
+                            <span className="font-mono font-bold text-stone-700 dark:text-stone-300">{u.employee.employeeCode}</span>
+                            <span className="block text-[10px] text-stone-400 font-serif">Staff Employee</span>
                           </div>
                         ) : (
-                          <span className="text-slate-400 text-[11px]">—</span>
+                          <span className="text-stone-400 text-[11px] font-mono">—</span>
                         )}
                       </td>
 
-                      <td className="p-3">
+                      <td className="p-3.5">
                         <span
-                          className={`px-2 py-0.5 rounded-full font-bold text-[10px] uppercase ${
+                          className={`px-2.5 py-1 rounded font-mono font-bold text-[10px] uppercase tracking-wider border ${
                             u.isActive
-                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                              : "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300"
+                              ? "bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800"
+                              : "bg-[#921111]/10 text-[#921111] border-[#921111]/25 dark:text-[#e05252]"
                           }`}
                         >
                           {u.isActive ? "Active" : "Suspended"}
                         </span>
                       </td>
 
-                      <td className="p-3 text-slate-400 text-[11px]">{formatDateTime(u.createdAt)}</td>
+                      <td className="p-3.5 text-stone-500 font-mono text-[11px]">{formatDateTime(u.createdAt)}</td>
 
-                      <td className="p-3 text-right">
+                      <td className="p-3.5 text-right">
                         <button
                           onClick={() => handleToggleActive(u.id, u.isActive)}
-                          className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                          className={`px-3 py-1 rounded-lg text-xs font-serif uppercase tracking-wider font-bold transition-colors ${
                             u.isActive
-                              ? "text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
-                              : "text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                              ? "text-[#921111] hover:bg-[#921111]/10"
+                              : "text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
                           }`}
                         >
                           {u.isActive ? "Suspend" : "Reactivate"}

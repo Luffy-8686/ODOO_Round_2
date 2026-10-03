@@ -28,21 +28,25 @@ export function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
   if (!isAuthenticated || !currentUser || !role) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center p-6">
-        <div className="max-w-md w-full p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl text-center space-y-5">
-          <div className="w-16 h-16 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 flex items-center justify-center mx-auto shadow-inner">
-            <Lock className="w-8 h-8" />
+        <div className="max-w-md w-full p-8 rounded-lg bg-white dark:bg-[#0E1522] border border-[#E5DFD5] dark:border-[#222D3E] shadow-sm text-center space-y-5">
+          <div className="w-14 h-14 rounded-lg bg-[#FAF7EE] dark:bg-[#1C1608] border border-[#DFCA9B] dark:border-[#4B3C18] text-[#8C6D23] dark:text-[#E3CEA4] flex items-center justify-center mx-auto shadow-sm">
+            <Lock className="w-7 h-7" />
           </div>
           <div>
-            <h2 className="text-xl font-black text-slate-900 dark:text-white">Authentication Required</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-              Please sign in to access this portal area.
+            <span className="text-[9px] font-bold uppercase tracking-[0.24em] text-[#8C6D23] dark:text-[#DFCA9B] block mb-1">
+              Club Quarters Verification
+            </span>
+            <h2 className="font-serif font-bold text-2xl text-[#0B1320] dark:text-white">Sign In Required</h2>
+            <div className="w-10 h-0.5 bg-[#C5A059] mx-auto my-2.5" />
+            <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] leading-relaxed">
+              Please present your club credentials to access this private members or staff quarter.
             </p>
           </div>
           <Link
             href={`/login?callbackUrl=${encodeURIComponent(pathname)}`}
-            className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20"
+            className="w-full py-2.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs tracking-widest uppercase flex items-center justify-center gap-1.5 shadow-sm transition-all"
           >
-            Go to Login
+            Present Credentials
           </Link>
         </div>
       </div>
@@ -53,39 +57,40 @@ export function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
     const userMeta = ROLE_METADATA[role];
     return (
       <div className="min-h-[60vh] flex items-center justify-center p-6">
-        <div className="max-w-md w-full p-8 rounded-3xl bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/50 shadow-2xl text-center space-y-5">
-          <div className="w-16 h-16 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 flex items-center justify-center mx-auto shadow-inner">
-            <ShieldAlert className="w-8 h-8" />
+        <div className="max-w-md w-full p-8 rounded-lg bg-white dark:bg-[#0E1522] border border-[#E5DFD5] dark:border-[#222D3E] shadow-sm text-center space-y-5">
+          <div className="w-14 h-14 rounded-lg bg-[#FDF4F4] dark:bg-[#1E0E10] border border-[#F8CCCC] dark:border-[#581A1D] text-[#921111] dark:text-[#F87171] flex items-center justify-center mx-auto shadow-sm">
+            <ShieldAlert className="w-7 h-7" />
           </div>
 
           <div>
-            <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950 px-2.5 py-1 rounded-full">
-              403 • Unauthorized Role
+            <span className="text-[9px] font-mono font-bold uppercase tracking-[0.2em] text-[#921111] dark:text-[#F87171] bg-[#FDF4F4] dark:bg-[#200A0C] border border-[#F8CCCC] dark:border-[#581A1D] px-2.5 py-1 rounded">
+              403 • Restricted Quarters
             </span>
-            <h2 className="text-xl font-black text-slate-900 dark:text-white mt-3">
-              Module Access Restricted
+            <h2 className="font-serif font-bold text-2xl text-[#0B1320] dark:text-white mt-3">
+              Quarter Access Restricted
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-              Your server-verified role is <strong className="text-slate-900 dark:text-white">{role}</strong>. This module requires:{" "}
-              <strong className="text-slate-900 dark:text-white">{allowedRoles.join(" or ")}</strong>.
+            <div className="w-10 h-0.5 bg-[#C5A059] mx-auto my-2.5" />
+            <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] leading-relaxed">
+              Your server-verified role is <strong className="text-[#0B1320] dark:text-white font-serif">{role}</strong>. Access to this module is strictly reserved for:{" "}
+              <strong className="text-[#0B1320] dark:text-white font-semibold">{allowedRoles.join(" or ")}</strong>.
             </p>
           </div>
 
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
+          <div className="pt-2 border-t border-[#E5DFD5] dark:border-[#222D3E] space-y-2">
             <Link
               href={userMeta?.portalPath || "/"}
-              className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20"
+              className="w-full py-2.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs tracking-widest uppercase flex items-center justify-center gap-1.5 shadow-sm transition-all"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Return to {userMeta?.label || "My"} Portal</span>
+              <span>Return to {userMeta?.label || "My"} Quarters</span>
             </Link>
 
             <button
               onClick={() => logout()}
-              className="w-full py-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold flex items-center justify-center gap-1.5"
+              className="w-full py-2 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] hover:bg-[#FAF8F5] dark:hover:bg-[#162032] text-[#374151] dark:text-[#D1D5DB] text-xs font-semibold tracking-wider uppercase flex items-center justify-center gap-1.5 transition-colors"
             >
               <LogOut className="w-4 h-4" />
-              <span>Sign In with Different Account</span>
+              <span>Switch Credentials</span>
             </button>
           </div>
         </div>

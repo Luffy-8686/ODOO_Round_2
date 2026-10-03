@@ -101,35 +101,35 @@ export default function CrmPipelinePage() {
   };
 
   const stages = [
-    { key: "NEW", label: "New Leads", color: "border-blue-500" },
-    { key: "CONTACTED", label: "Contacted", color: "border-amber-500" },
-    { key: "QUOTE_SENT", label: "Quote Sent", color: "border-purple-500" },
-    { key: "TRIAL_BOOKED", label: "Trial Booked", color: "border-emerald-500" },
-    { key: "CONVERTED", label: "Converted", color: "border-green-600" },
-    { key: "LOST", label: "Archived / Lost", color: "border-slate-400" },
+    { key: "NEW", label: "New Inquiries", border: "border-[#C5A059]", badge: "bg-[#C5A059]/15 text-[#8C6D2D] dark:text-[#C5A059]" },
+    { key: "CONTACTED", label: "Contacted", border: "border-[#0B1320] dark:border-stone-400", badge: "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300" },
+    { key: "QUOTE_SENT", label: "Proposal Sent", border: "border-[#921111]", badge: "bg-[#921111]/15 text-[#921111] dark:text-[#e05252]" },
+    { key: "TRIAL_BOOKED", label: "Trial Booked", border: "border-emerald-600", badge: "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300" },
+    { key: "CONVERTED", label: "Enrolled Member", border: "border-emerald-700", badge: "bg-emerald-600 text-white" },
+    { key: "LOST", label: "Archived / Lost", border: "border-stone-400", badge: "bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400" },
   ];
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* HEADER */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-[#E5DFD5] dark:border-[#223042]">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Enquiry Funnel & CRM Pipeline
+          <div className="flex items-center gap-2.5">
+            <h1 className="font-serif text-2xl font-bold text-[#0B1320] dark:text-[#FAF8F5] tracking-tight">
+              Prospect Pipeline & Membership Funnel
             </h1>
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold">
+            <span className="text-[10px] font-mono tracking-widest uppercase px-2.5 py-1 rounded bg-[#921111]/10 text-[#921111] dark:text-[#e05252] border border-[#921111]/25 font-bold">
               24-HR SLA MONITORING
             </span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Website trials, corporate quotes, lead timeline, quote generator, and 1-click member conversion.
+          <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 font-sans">
+            Website guest trials, corporate proposals, candidate dossier timeline, and single-click membership enrollment.
           </p>
         </div>
 
         <button
           onClick={() => {
-            const name = prompt("Enter lead name:");
+            const name = prompt("Enter prospect name:");
             const phone = prompt("Enter phone number:");
             if (name && phone) {
               fetch("/api/crm/leads", {
@@ -139,60 +139,74 @@ export default function CrmPipelinePage() {
               }).then(() => fetchLeads());
             }
           }}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-xs"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#921111] hover:bg-[#7A0E0E] text-white text-xs font-serif uppercase tracking-wider font-semibold shadow-xs transition-colors"
         >
-          <Plus className="w-4 h-4" />
-          <span>Add Quick Lead</span>
+          <Plus className="w-3.5 h-3.5" />
+          <span>Add New Prospect</span>
         </button>
       </div>
 
       {/* KANBAN STAGE PIPELINE */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3.5 items-start">
         {stages.map((stg) => {
           const stageLeads = leads.filter((l) => l.status === stg.key);
 
           return (
             <div
               key={stg.key}
-              className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3"
+              className="p-3.5 rounded-xl bg-white dark:bg-[#0F1923] border border-[#E5DFD5] dark:border-[#223042] shadow-xs space-y-3"
             >
-              <div className={`flex items-center justify-between pb-2 border-b-2 ${stg.color}`}>
-                <span className="font-bold text-xs text-slate-800 dark:text-slate-200">{stg.label}</span>
-                <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">
+              <div className={`flex items-center justify-between pb-2.5 border-b-2 ${stg.border}`}>
+                <span className="font-serif font-bold text-xs text-[#0B1320] dark:text-[#FAF8F5] tracking-wide">
+                  {stg.label}
+                </span>
+                <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${stg.badge}`}>
                   {stageLeads.length}
                 </span>
               </div>
 
-              <div className="space-y-2 min-h-[300px]">
-                {stageLeads.map((lead) => (
-                  <div
-                    key={lead.id}
-                    onClick={() => setSelectedLead(lead)}
-                    className={`p-3 rounded-xl border text-xs cursor-pointer transition-all shadow-xs hover:shadow-md space-y-2 ${
-                      lead.isStale
-                        ? "bg-red-50/70 dark:bg-red-950/40 border-red-300 dark:border-red-800"
-                        : "bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/80"
-                    }`}
-                  >
-                    {lead.isStale && (
-                      <div className="flex items-center gap-1 text-[10px] font-bold text-red-600 animate-pulse">
-                        <AlertTriangle className="w-3 h-3" />
-                        <span>SLA Breached (&gt;24h)</span>
-                      </div>
-                    )}
-
-                    <div className="font-bold text-slate-900 dark:text-white">{lead.name}</div>
-                    <div className="text-[11px] text-slate-500">{lead.phone}</div>
-                    <div className="text-[10px] font-mono text-emerald-600 font-semibold">
-                      Interest: {lead.sportInterest || "Club"}
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                      <span className="text-[9px] text-slate-400 font-mono">{lead.leadNumber}</span>
-                      <span className="text-[10px] text-slate-600 dark:text-slate-300 font-bold">Details →</span>
-                    </div>
+              <div className="space-y-2.5 min-h-[320px]">
+                {stageLeads.length === 0 ? (
+                  <div className="py-8 text-center text-stone-400 dark:text-stone-600 text-[11px] font-mono italic">
+                    No candidates
                   </div>
-                ))}
+                ) : (
+                  stageLeads.map((lead) => (
+                    <div
+                      key={lead.id}
+                      onClick={() => setSelectedLead(lead)}
+                      className={`p-3 rounded-lg border text-xs cursor-pointer transition-all shadow-xs hover:shadow-md space-y-2 group ${
+                        lead.isStale
+                          ? "bg-[#921111]/5 dark:bg-[#921111]/20 border-[#921111]/40"
+                          : "bg-[#FAF8F5] dark:bg-[#162232] border-[#E5DFD5] dark:border-[#223042] hover:border-[#C5A059]"
+                      }`}
+                    >
+                      {lead.isStale && (
+                        <div className="flex items-center gap-1 text-[10px] font-bold text-[#921111] animate-pulse">
+                          <AlertTriangle className="w-3 h-3" />
+                          <span className="font-mono uppercase tracking-wider">SLA Breached (&gt;24h)</span>
+                        </div>
+                      )}
+
+                      <div className="font-serif font-bold text-sm text-[#0B1320] dark:text-[#FAF8F5] group-hover:text-[#921111] dark:group-hover:text-[#C5A059] transition-colors">
+                        {lead.name}
+                      </div>
+                      <div className="text-[11px] text-stone-500 dark:text-stone-400 font-mono">
+                        {lead.phone}
+                      </div>
+                      <div className="text-[10px] font-mono uppercase tracking-widest text-[#C5A059] font-bold">
+                        Interest: {lead.sportInterest || "General Club"}
+                      </div>
+
+                      <div className="pt-2 border-t border-[#E5DFD5] dark:border-[#223042] flex items-center justify-between">
+                        <span className="text-[9px] text-stone-400 font-mono">{lead.leadNumber}</span>
+                        <span className="text-[10px] text-[#921111] dark:text-[#C5A059] font-serif uppercase tracking-wider font-bold group-hover:translate-x-0.5 transition-transform">
+                          Dossier →
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           );
@@ -201,32 +215,39 @@ export default function CrmPipelinePage() {
 
       {/* LEAD DETAILS & ACTIONS MODAL */}
       {selectedLead && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative text-xs space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0F1923] border border-[#E5DFD5] dark:border-[#223042] rounded-2xl max-w-lg w-full p-6 shadow-2xl relative text-xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E5DFD5] dark:border-[#223042]">
               <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">{selectedLead.name}</h3>
-                <span className="text-[11px] font-mono text-emerald-600 font-bold">
+                <h3 className="font-serif text-lg font-bold text-[#0B1320] dark:text-[#FAF8F5]">
+                  {selectedLead.name}
+                </h3>
+                <span className="text-[11px] font-mono text-[#C5A059] font-bold tracking-wider">
                   {selectedLead.leadNumber} • {selectedLead.status}
                 </span>
               </div>
-              <button onClick={() => setSelectedLead(null)} className="p-1 rounded text-slate-400">
+              <button
+                onClick={() => setSelectedLead(null)}
+                className="w-7 h-7 rounded-full bg-[#FAF8F5] dark:bg-[#162232] border border-[#E5DFD5] dark:border-[#223042] flex items-center justify-center text-stone-400 hover:text-[#0B1320] dark:hover:text-white"
+              >
                 ✕
               </button>
             </div>
 
             {/* Stage Action Buttons */}
             <div className="space-y-1.5">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Move Pipeline Stage:</span>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-stone-400 block font-mono">
+                Advance Pipeline Stage:
+              </span>
               <div className="flex flex-wrap gap-1.5">
                 {stages.map((s) => (
                   <button
                     key={s.key}
                     onClick={() => handleUpdateStatus(selectedLead.id, s.key)}
-                    className={`px-2.5 py-1 rounded-lg font-bold text-[10px] transition-colors ${
+                    className={`px-3 py-1.5 rounded-lg font-serif text-[11px] uppercase tracking-wider font-bold transition-all ${
                       selectedLead.status === s.key
-                        ? "bg-emerald-600 text-white"
-                        : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                        ? "bg-[#921111] text-white shadow-xs"
+                        : "bg-[#FAF8F5] dark:bg-[#162232] border border-[#E5DFD5] dark:border-[#223042] text-stone-700 dark:text-stone-300 hover:border-[#C5A059]"
                     }`}
                   >
                     {s.label}
@@ -236,19 +257,21 @@ export default function CrmPipelinePage() {
             </div>
 
             {/* 1-Click Convert to Member */}
-            <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-center justify-between">
+            <div className="p-4 rounded-xl bg-[#C5A059]/10 border border-[#C5A059]/30 flex items-center justify-between">
               <div>
-                <span className="font-bold text-amber-900 dark:text-amber-200 block">Ready to Sign Up?</span>
-                <span className="text-[10px] text-amber-700 dark:text-amber-400">
-                  Pre-fills member onboarding with prospect details
+                <span className="font-serif font-bold text-[#0B1320] dark:text-[#FAF8F5] block text-sm">
+                  Ready for Club Membership?
+                </span>
+                <span className="text-[10px] text-stone-600 dark:text-stone-400">
+                  Pre-fills new member enrollment dossier with prospect information.
                 </span>
               </div>
               <Link
                 href="/app/members"
-                className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs flex items-center gap-1 shadow-xs"
+                className="px-3.5 py-2 rounded-lg bg-[#C5A059] hover:bg-[#b08e4c] text-white font-serif uppercase tracking-wider text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
               >
                 <UserPlus className="w-3.5 h-3.5" />
-                <span>Convert to Member</span>
+                <span>Enroll Member</span>
               </Link>
             </div>
 
@@ -258,35 +281,47 @@ export default function CrmPipelinePage() {
                 setQuoteLead(selectedLead);
                 setShowQuoteModal(true);
               }}
-              className="w-full py-2 rounded-lg bg-purple-50 dark:bg-purple-950 border border-purple-200 text-purple-700 dark:text-purple-300 font-bold flex items-center justify-center gap-1.5"
+              className="w-full py-2.5 rounded-xl bg-[#0B1320] hover:bg-[#162232] text-white border border-[#0B1320] font-serif uppercase tracking-wider text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors"
             >
-              <FileText className="w-3.5 h-3.5" />
-              <span>Generate PDF Proposal / Quotation</span>
+              <FileText className="w-3.5 h-3.5 text-[#C5A059]" />
+              <span>Generate Official PDF Proposal</span>
             </button>
 
             {/* Activity History & Note Adder */}
             <div className="space-y-2">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Activity Log</span>
-              <div className="max-h-32 overflow-y-auto space-y-1.5">
-                {selectedLead.activities?.map((act: any) => (
-                  <div key={act.id} className="p-2 rounded bg-slate-50 dark:bg-slate-800 text-[11px]">
-                    <span className="font-bold block">{act.summary}</span>
-                    {act.details && <p className="text-slate-500">{act.details}</p>}
-                    <span className="text-[9px] text-slate-400 block mt-0.5">{formatDateTime(act.createdAt)}</span>
-                  </div>
-                ))}
+              <span className="text-[10px] uppercase font-bold tracking-wider text-stone-400 block font-mono">
+                Candidate Interaction Log
+              </span>
+              <div className="max-h-36 overflow-y-auto space-y-2 pr-1">
+                {selectedLead.activities && selectedLead.activities.length > 0 ? (
+                  selectedLead.activities.map((act: any) => (
+                    <div
+                      key={act.id}
+                      className="p-2.5 rounded-lg bg-[#FAF8F5] dark:bg-[#162232] border border-[#E5DFD5] dark:border-[#223042] text-[11px]"
+                    >
+                      <span className="font-bold text-[#0B1320] dark:text-[#FAF8F5] block">{act.summary}</span>
+                      {act.details && <p className="text-stone-500 dark:text-stone-400 mt-0.5">{act.details}</p>}
+                      <span className="text-[9px] font-mono text-[#C5A059] block mt-1">{formatDateTime(act.createdAt)}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-stone-400 text-[11px] italic py-2">No activity logged yet.</div>
+                )}
               </div>
 
-              <form onSubmit={handleAddNote} className="flex gap-2 pt-2">
+              <form onSubmit={handleAddNote} className="flex gap-2 pt-1">
                 <input
                   type="text"
                   value={newNote}
                   onChange={(e) => setNewNote(e.target.value)}
-                  placeholder="Log call note, WhatsApp update..."
-                  className="flex-1 p-2 rounded-lg border bg-slate-50 dark:bg-slate-800 text-xs"
+                  placeholder="Log concierge call, tour feedback, WhatsApp update..."
+                  className="flex-1 p-2 rounded-lg border border-[#E5DFD5] dark:border-[#223042] bg-[#FAF8F5] dark:bg-[#162232] text-xs text-[#0B1320] dark:text-[#FAF8F5] focus:outline-none focus:border-[#C5A059]"
                 />
-                <button type="submit" className="px-3 py-2 rounded-lg bg-slate-800 text-white font-bold text-xs">
-                  Add
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg bg-[#921111] hover:bg-[#7A0E0E] text-white font-serif uppercase tracking-wider text-xs font-bold transition-colors"
+                >
+                  Log
                 </button>
               </form>
             </div>
@@ -296,34 +331,47 @@ export default function CrmPipelinePage() {
 
       {/* QUOTE GENERATOR MODAL */}
       {showQuoteModal && quoteLead && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border rounded-2xl max-w-lg w-full p-6 shadow-2xl relative text-xs space-y-4">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">
-              Quotation Proposal for {quoteLead.name}
-            </h3>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0F1923] border border-[#E5DFD5] dark:border-[#223042] rounded-2xl max-w-lg w-full p-6 shadow-2xl relative text-xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E5DFD5] dark:border-[#223042]">
+              <div>
+                <h3 className="font-serif text-lg font-bold text-[#0B1320] dark:text-[#FAF8F5]">
+                  Membership Proposal & Quotation
+                </h3>
+                <span className="text-xs text-stone-500 font-mono">Prepared for {quoteLead.name}</span>
+              </div>
+              <button
+                onClick={() => setShowQuoteModal(false)}
+                className="w-7 h-7 rounded-full bg-[#FAF8F5] dark:bg-[#162232] border border-[#E5DFD5] dark:border-[#223042] flex items-center justify-center text-stone-400 hover:text-[#0B1320]"
+              >
+                ✕
+              </button>
+            </div>
 
-            <div className="p-4 rounded-xl border bg-slate-50 dark:bg-slate-800 space-y-2">
-              <span className="font-bold text-slate-700 dark:text-slate-300 block">Line Items:</span>
+            <div className="p-4 rounded-xl border border-[#E5DFD5] dark:border-[#223042] bg-[#FAF8F5] dark:bg-[#162232] space-y-2.5">
+              <span className="font-serif font-bold text-xs uppercase tracking-wider text-stone-600 dark:text-stone-300 block">
+                Privilege Package Line Items:
+              </span>
               {quoteItems.map((item, idx) => (
-                <div key={idx} className="flex justify-between py-1 border-b border-slate-200 dark:border-slate-700">
-                  <span>{item.description}</span>
-                  <span className="font-mono font-bold">{formatINR(item.amountPaise)}</span>
+                <div key={idx} className="flex justify-between py-1.5 border-b border-[#E5DFD5] dark:border-[#223042]">
+                  <span className="text-stone-700 dark:text-stone-300">{item.description}</span>
+                  <span className="font-mono font-bold text-[#0B1320] dark:text-[#FAF8F5]">{formatINR(item.amountPaise)}</span>
                 </div>
               ))}
-              <div className="flex justify-between font-black text-sm pt-2 text-emerald-600">
-                <span>Total Package Price:</span>
-                <span>
+              <div className="flex justify-between font-serif font-bold text-base pt-2 text-[#921111] dark:text-[#C5A059]">
+                <span>Total Annual Proposal:</span>
+                <span className="font-mono">
                   {formatINR(quoteItems.reduce((s, it) => s + it.amountPaise, 0))}
                 </span>
               </div>
             </div>
 
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-2.5 pt-2">
               <button
                 onClick={() => setShowQuoteModal(false)}
-                className="flex-1 py-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 font-semibold"
+                className="flex-1 py-2.5 rounded-xl border border-[#E5DFD5] dark:border-[#223042] bg-[#FAF8F5] dark:bg-[#162232] text-stone-700 dark:text-stone-300 font-serif uppercase tracking-wider text-xs font-semibold hover:border-[#C5A059] transition-colors"
               >
-                Close
+                Cancel
               </button>
               <button
                 onClick={() => {
@@ -331,10 +379,10 @@ export default function CrmPipelinePage() {
                   handleUpdateStatus(quoteLead.id, "QUOTE_SENT");
                   setShowQuoteModal(false);
                 }}
-                className="flex-1 py-2.5 rounded-lg bg-purple-600 text-white font-bold flex items-center justify-center gap-1.5"
+                className="flex-1 py-2.5 rounded-xl bg-[#921111] hover:bg-[#7A0E0E] text-white font-serif uppercase tracking-wider text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-colors"
               >
-                <Printer className="w-4 h-4" />
-                Print & Send Quote
+                <Printer className="w-3.5 h-3.5" />
+                <span>Print & Dispatch Proposal</span>
               </button>
             </div>
           </div>

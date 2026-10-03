@@ -20,18 +20,18 @@ export default function OwnerPlansPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-[#E5DFD5] dark:border-[#223042]">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              Membership Plans & Pricing Rates
+          <div className="flex items-center gap-2.5">
+            <h1 className="font-serif text-2xl font-bold text-[#0B1320] dark:text-[#FAF8F5] tracking-tight">
+              Membership Plans & Tier Privileges
             </h1>
-            <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 font-bold">
-              👑 OWNER CONFIG
+            <span className="text-[10px] font-mono tracking-widest uppercase px-2.5 py-1 rounded bg-[#921111]/10 text-[#921111] dark:text-[#e05252] border border-[#921111]/25 font-bold">
+              GOVERNANCE CONFIG
             </span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Configure tier subscription fees, court privileges, pro shop discounts, and F&B discounts.
+          <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 font-sans">
+            Configure tier subscription fees, court privileges, pro shop discounts, and dining & bar privileges.
           </p>
         </div>
       </div>
@@ -40,45 +40,45 @@ export default function OwnerPlansPage() {
         {plans.map((plan) => (
           <div
             key={plan.id}
-            className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 text-xs"
+            className="p-6 rounded-xl bg-white dark:bg-[#0F1923] border border-[#E5DFD5] dark:border-[#223042] shadow-xs space-y-4 text-xs hover:border-[#C5A059] transition-all"
           >
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-sm text-slate-900 dark:text-white">{plan.name}</span>
-              <span className="font-mono font-bold px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 uppercase text-[10px]">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E5DFD5] dark:border-[#223042]">
+              <span className="font-serif font-bold text-base text-[#0B1320] dark:text-[#FAF8F5]">{plan.name}</span>
+              <span className="font-mono font-bold px-2.5 py-0.5 rounded bg-[#C5A059]/15 text-[#8C6D2D] dark:text-[#C5A059] border border-[#C5A059]/30 uppercase text-[10px] tracking-wider">
                 {plan.tier}
               </span>
             </div>
 
-            <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="space-y-2.5 pt-1">
               <div className="flex justify-between">
-                <span className="text-slate-400">Monthly Fee:</span>
-                <span className="font-bold">{formatINR(plan.monthlyFeePaise)}</span>
+                <span className="text-stone-400 font-serif uppercase tracking-wider text-[10px]">Monthly Subscription:</span>
+                <span className="font-mono font-bold text-[#0B1320] dark:text-[#FAF8F5]">{formatINR(plan.monthlyFeePaise)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Annual Fee:</span>
-                <span className="font-bold">{formatINR(plan.annualFeePaise)}</span>
+                <span className="text-stone-400 font-serif uppercase tracking-wider text-[10px]">Annual Subscription:</span>
+                <span className="font-mono font-bold text-[#0B1320] dark:text-[#FAF8F5]">{formatINR(plan.annualFeePaise)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Court Hourly Rate:</span>
-                <span className="font-bold text-emerald-600">
-                  {plan.courtRatePerHourPaise === 0 ? "FREE (100% Off)" : formatINR(plan.courtRatePerHourPaise)}
+                <span className="text-stone-400 font-serif uppercase tracking-wider text-[10px]">Court Hourly Rate:</span>
+                <span className="font-mono font-bold text-[#921111] dark:text-[#C5A059]">
+                  {plan.courtRatePerHourPaise === 0 ? "Complimentary (100% Off)" : formatINR(plan.courtRatePerHourPaise)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Shop Discount:</span>
-                <span className="font-bold">{plan.shopDiscountPercent}% Off</span>
+                <span className="text-stone-400 font-serif uppercase tracking-wider text-[10px]">Pro Shop Privilege:</span>
+                <span className="font-mono font-bold text-[#0B1320] dark:text-[#FAF8F5]">{plan.shopDiscountPercent}% Off</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Bar & Food Discount:</span>
-                <span className="font-bold">{plan.barDiscountPercent}% Off</span>
+                <span className="text-stone-400 font-serif uppercase tracking-wider text-[10px]">Dining & Bar Privilege:</span>
+                <span className="font-mono font-bold text-[#0B1320] dark:text-[#FAF8F5]">{plan.barDiscountPercent}% Off</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Max Bookings / Day:</span>
-                <span className="font-bold">{plan.maxBookingsPerDay} Bookings</span>
+                <span className="text-stone-400 font-serif uppercase tracking-wider text-[10px]">Max Bookings / Day:</span>
+                <span className="font-mono font-bold text-[#0B1320] dark:text-[#FAF8F5]">{plan.maxBookingsPerDay} Bookings</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Advance Booking Window:</span>
-                <span className="font-bold">{plan.advanceBookingDays} Days</span>
+                <span className="text-stone-400 font-serif uppercase tracking-wider text-[10px]">Advance Window:</span>
+                <span className="font-mono font-bold text-[#0B1320] dark:text-[#FAF8F5]">{plan.advanceBookingDays} Days</span>
               </div>
             </div>
           </div>

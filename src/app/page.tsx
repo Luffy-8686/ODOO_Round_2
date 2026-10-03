@@ -182,83 +182,92 @@ export default function PublicHomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      {/* HERO SECTION */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-emerald-950 via-slate-900 to-slate-950 text-white py-20 px-4 sm:px-6 lg:px-8 border-b border-slate-800">
-        <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:24px_24px] opacity-15" />
-        <div className="max-w-7xl mx-auto relative z-10 text-center space-y-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold uppercase tracking-wider">
-            <Sparkles className="w-3.5 h-3.5" />
-            Bangalore's Premier Racquet & Sports Club
+    <div className="min-h-screen bg-[#FAF8F5] dark:bg-[#080D14] text-[#111827] dark:text-[#F3F4F6] transition-colors">
+      {/* HERO SECTION - NYAC Heritage Athletic Aesthetic */}
+      <section className="relative overflow-hidden bg-[#0B1320] text-[#FAF8F5] py-24 px-4 sm:px-6 lg:px-8 border-b border-[#222D3E]">
+        {/* Subtle Heritage Crest Texture */}
+        <div className="absolute inset-0 bg-[radial-gradient(#C5A059_1px,transparent_1px)] [background-size:32px_32px] opacity-10 pointer-events-none" />
+
+        <div className="max-w-6xl mx-auto relative z-10 text-center space-y-6">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#162032] border border-[#C5A059]/40 text-[#DFCA9B] text-[10px] font-bold uppercase tracking-[0.25em]">
+            <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
+            Bangalore's Premier Private Athletic Club
           </div>
 
-          <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-tight">
-            Elevate Your Game at <br />
-            <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300 bg-clip-text text-transparent">
-              The Champions Club
+          <h1 className="font-serif text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-white max-w-4xl mx-auto leading-[1.12]">
+            Athletic Excellence & <br />
+            <span className="text-[#DFCA9B] italic font-normal">
+              Distinguished Camaraderie
             </span>
           </h1>
 
-          <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto font-normal">
-            International clay tennis courts, panoramic padel, BWF indoor badminton, cricket turf nets, premium pro gear shop, and an artisanal recovery bar.
+          <div className="w-16 h-0.5 bg-[#C5A059] mx-auto my-4" />
+
+          <p className="text-sm sm:text-base text-[#D1D5DB] max-w-2xl mx-auto font-light leading-relaxed">
+            Founded to inspire athletic discipline and social fellowship. Featuring championship clay tennis, panoramic padel, BWF indoor badminton, floodlit turf nets, an artisanal dining lounge, and pro gear counter.
           </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
-            <Link
-              href="/login?tab=signup"
-              className="px-6 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>Create Free Account / Sign Up</span>
-            </Link>
+          <div className="flex flex-wrap items-center justify-center gap-4 pt-6">
             <button
               onClick={() => {
                 setShowTrialModal(true);
                 setTrialSuccess(false);
               }}
-              className="px-6 py-3.5 rounded-xl bg-slate-800/90 hover:bg-slate-800 border border-slate-700 text-white font-semibold text-sm transition-all"
+              className="px-6 py-3.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs tracking-widest uppercase shadow-md transition-all transform hover:-translate-y-0.5 active:translate-y-0"
             >
-              Book a Complimentary Trial
+              Book a Private Trial Session
             </button>
             <a
               href="#plans"
-              className="px-6 py-3.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/40 text-amber-300 font-semibold text-sm transition-all"
+              className="px-6 py-3.5 rounded-md border border-[#C5A059] hover:bg-[#C5A059]/10 text-[#DFCA9B] font-bold text-xs tracking-widest uppercase transition-all"
             >
-              Explore Membership Tiers
+              Membership Privileges
             </a>
+            <button
+              onClick={() => {
+                setShowQuoteModal(true);
+                setQuoteSuccess(false);
+              }}
+              className="px-6 py-3.5 rounded-md bg-[#162032] hover:bg-[#1F293D] border border-[#334155] text-[#E5E7EB] font-bold text-xs tracking-widest uppercase transition-all"
+            >
+              Corporate Inquiries
+            </button>
           </div>
 
-          {/* Quick stats banner */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto pt-10 border-t border-slate-800/80 text-left">
-            <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-              <div className="text-2xl font-bold text-white">6 Pro Courts</div>
-              <div className="text-xs text-slate-400 mt-0.5">Tennis, Padel, Badminton, Cricket</div>
+          {/* Quick Stats Strip */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto pt-12 border-t border-[#1F293D] text-left">
+            <div className="p-4 rounded-lg bg-[#0E1522] border border-[#1F293D]">
+              <div className="font-serif text-2xl font-bold text-white">6 Championship Courts</div>
+              <div className="text-[11px] text-[#9CA3AF] mt-0.5 tracking-wide">Tennis • Padel • Badminton • Cricket</div>
             </div>
-            <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-              <div className="text-2xl font-bold text-emerald-400">6 AM – 11 PM</div>
-              <div className="text-xs text-slate-400 mt-0.5">Daily Floodlit Sessions</div>
+            <div className="p-4 rounded-lg bg-[#0E1522] border border-[#1F293D]">
+              <div className="font-serif text-2xl font-bold text-[#DFCA9B]">06:00 – 23:00</div>
+              <div className="text-[11px] text-[#9CA3AF] mt-0.5 tracking-wide">Daily Floodlit Quarters</div>
             </div>
-            <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-              <div className="text-2xl font-bold text-amber-400">Gold & Silver</div>
-              <div className="text-xs text-slate-400 mt-0.5">Free & 50% Off Court Access</div>
+            <div className="p-4 rounded-lg bg-[#0E1522] border border-[#1F293D]">
+              <div className="font-serif text-2xl font-bold text-[#C5A059]">Tier Privileges</div>
+              <div className="text-[11px] text-[#9CA3AF] mt-0.5 tracking-wide">Gold All-Access & Standard Passes</div>
             </div>
-            <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-              <div className="text-2xl font-bold text-purple-400">Pro Shop & Bar</div>
-              <div className="text-xs text-slate-400 mt-0.5">Member Discounts & Tabs</div>
+            <div className="p-4 rounded-lg bg-[#0E1522] border border-[#1F293D]">
+              <div className="font-serif text-2xl font-bold text-white">Lounge & Pro Shop</div>
+              <div className="text-[11px] text-[#9CA3AF] mt-0.5 tracking-wide">Fine Dining, Member Tabs & Servicing</div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* FACILITIES & COURTS */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="text-center space-y-2 mb-12">
-          <h2 className="text-xs uppercase font-bold text-emerald-600 dark:text-emerald-400 tracking-wider">
-            World-Class Infrastructure
+      {/* FACILITIES & COURTS SECTION */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="text-center space-y-2 mb-14">
+          <span className="text-[10px] uppercase font-bold text-[#8C6D23] dark:text-[#DFCA9B] tracking-[0.24em] block">
+            Championship Grounds
+          </span>
+          <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#0B1320] dark:text-white">
+            World-Class Athletic Infrastructure
           </h2>
-          <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white">Our Bookable Courts</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-lg mx-auto">
-            Maintained to professional championship standards with cushioned surfaces and low-glare LED floodlights.
+          <div className="w-14 h-0.5 bg-[#C5A059] mx-auto my-3" />
+          <p className="text-sm text-[#4B5563] dark:text-[#9CA3AF] max-w-xl mx-auto leading-relaxed">
+            Maintained to international federation specifications with tournament clay surfaces, glass padel enclosures, and glare-free broadcast lighting.
           </p>
         </div>
 
@@ -266,33 +275,35 @@ export default function PublicHomePage() {
           {courts.map((court) => (
             <div
               key={court.id}
-              className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+              className="p-6 rounded-lg bg-white dark:bg-[#0E1522] border border-[#E5DFD5] dark:border-[#222D3E] shadow-sm hover:border-[#C5A059] hover:shadow-md transition-all flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="text-2xl">{court.sport?.icon || "🎾"}</span>
+                  <span className="text-2xl p-2 rounded bg-[#FAF8F5] dark:bg-[#162032] border border-[#E5DFD5] dark:border-[#263244]">
+                    {court.sport?.icon || "🎾"}
+                  </span>
                   <span
-                    className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
+                    className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase font-mono tracking-wider border ${
                       court.status === "ACTIVE"
-                        ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300"
-                        : "bg-amber-50 text-amber-700"
+                        ? "bg-[#FAF7EE] text-[#8C6D23] border-[#DFCA9B] dark:bg-[#1C1608] dark:text-[#E3CEA4] dark:border-[#4B3C18]"
+                        : "bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]"
                     }`}
                   >
                     {court.status}
                   </span>
                 </div>
-                <h4 className="text-lg font-bold text-slate-900 dark:text-white mt-4">{court.name}</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  {court.surfaceType} Surface • {court.isIndoor ? "Indoor Air-Cooled" : "Outdoor Floodlit"}
+                <h3 className="font-serif text-xl font-bold text-[#0B1320] dark:text-white mt-4">{court.name}</h3>
+                <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] mt-1">
+                  {court.surfaceType} Surface • {court.isIndoor ? "Indoor Climate Regulated" : "Outdoor Floodlit"}
                 </p>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <div className="mt-8 pt-4 border-t border-[#E5DFD5] dark:border-[#222D3E] flex items-center justify-between">
                 <div>
-                  <span className="text-xs text-slate-400 block">Walk-in Rate</span>
-                  <span className="text-base font-extrabold text-slate-900 dark:text-white">
+                  <span className="text-[10px] text-[#9CA3AF] uppercase tracking-wider block font-semibold">Walk-in Tariff</span>
+                  <span className="font-serif text-lg font-bold text-[#0B1320] dark:text-white">
                     {formatINR(court.hourlyRatePaise)}
-                    <span className="text-xs font-normal text-slate-500"> / hr</span>
+                    <span className="text-xs font-normal text-[#6B7280]"> / hr</span>
                   </span>
                 </div>
                 <button
@@ -300,9 +311,9 @@ export default function PublicHomePage() {
                     setTrialSport(court.sport?.name || "Tennis");
                     setShowTrialModal(true);
                   }}
-                  className="px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300 text-xs font-bold transition-colors"
+                  className="px-3.5 py-1.5 rounded-md bg-[#FAF8F5] dark:bg-[#162032] hover:bg-[#921111] hover:text-white text-[#921111] dark:text-[#DFCA9B] border border-[#E5DFD5] dark:border-[#263244] hover:border-[#921111] text-xs font-bold tracking-wider uppercase transition-all"
                 >
-                  Book Slot
+                  Reserve Slot
                 </button>
               </div>
             </div>
@@ -310,16 +321,19 @@ export default function PublicHomePage() {
         </div>
       </section>
 
-      {/* MEMBERSHIP PLANS (LIVE PRICING TABLE) */}
-      <section id="plans" className="py-16 px-4 sm:px-6 lg:px-8 bg-slate-100 dark:bg-slate-900/60 border-y border-slate-200 dark:border-slate-800">
+      {/* MEMBERSHIP PLANS - NYAC Tier Cards */}
+      <section id="plans" className="py-20 px-4 sm:px-6 lg:px-8 bg-[#F4EFEA] dark:bg-[#0B1320] border-y border-[#E5DFD5] dark:border-[#1F293D]">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center space-y-2 mb-12">
-            <h2 className="text-xs uppercase font-bold text-amber-600 dark:text-amber-400 tracking-wider">
-              Membership Tiers
+          <div className="text-center space-y-2 mb-14">
+            <span className="text-[10px] uppercase font-bold text-[#8C6D23] dark:text-[#DFCA9B] tracking-[0.24em] block">
+              Membership Categories
+            </span>
+            <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#0B1320] dark:text-white">
+              Privileges of Membership
             </h2>
-            <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white">Choose Your Level of Access</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-lg mx-auto">
-              Transparent INR pricing with zero hidden maintenance surcharges. Upgrade or pause anytime.
+            <div className="w-14 h-0.5 bg-[#C5A059] mx-auto my-3" />
+            <p className="text-sm text-[#4B5563] dark:text-[#9CA3AF] max-w-xl mx-auto leading-relaxed">
+              Transparent subscriptions with priority booking privileges, clubhouse hospitality allowances, and zero maintenance surcharges.
             </p>
           </div>
 
@@ -332,72 +346,72 @@ export default function PublicHomePage() {
               return (
                 <div
                   key={plan.id}
-                  className={`p-8 rounded-2xl flex flex-col justify-between transition-all relative ${
+                  className={`p-8 rounded-lg flex flex-col justify-between transition-all relative ${
                     isGold
-                      ? "bg-slate-900 text-white border-2 border-amber-400 shadow-xl shadow-amber-500/10 md:-translate-y-2"
-                      : "bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 shadow-sm"
+                      ? "bg-[#0E1522] text-[#FAF8F5] border-2 border-[#C5A059] shadow-xl md:-translate-y-2"
+                      : "bg-white dark:bg-[#0E1522] text-[#111827] dark:text-white border border-[#E5DFD5] dark:border-[#222D3E] shadow-sm"
                   }`}
                 >
                   {isGold && (
-                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 text-[10px] font-black uppercase px-3 py-1 rounded-full tracking-wider shadow-md">
-                      Most Popular • All-Access
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#C5A059] text-[#0B1320] text-[9px] font-black uppercase px-3 py-0.5 rounded font-mono tracking-[0.2em] shadow-sm">
+                      Distinguished All-Access
                     </div>
                   )}
 
                   <div>
                     <div className="flex items-center justify-between">
                       <span
-                        className={`text-xs font-bold px-2.5 py-1 rounded-full uppercase font-mono ${
+                        className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase font-mono tracking-wider border ${
                           isGold
-                            ? "bg-amber-400/20 text-amber-300"
+                            ? "bg-[#FAF7EE]/10 text-[#DFCA9B] border-[#C5A059]/40"
                             : isJunior
-                            ? "bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300"
-                            : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                            ? "bg-[#EFF6FF] dark:bg-[#1E293B] text-[#1D4ED8] dark:text-[#93C5FD] border-[#BFDBFE] dark:border-[#3B82F6]/30"
+                            : "bg-[#F3F4F6] dark:bg-[#162032] text-[#374151] dark:text-[#D1D5DB] border-[#E5E7EB] dark:border-[#263244]"
                         }`}
                       >
                         {plan.tier} TIER
                       </span>
                     </div>
 
-                    <h4 className="text-2xl font-bold mt-4">{plan.name}</h4>
-                    <p className={`text-xs mt-1 ${isGold ? "text-slate-300" : "text-slate-500 dark:text-slate-400"}`}>
+                    <h3 className="font-serif text-2xl font-bold mt-4">{plan.name}</h3>
+                    <p className={`text-xs mt-1 leading-relaxed ${isGold ? "text-[#9CA3AF]" : "text-[#6B7280] dark:text-[#9CA3AF]"}`}>
                       {plan.description}
                     </p>
 
                     <div className="mt-6 mb-6">
                       <div className="flex items-baseline gap-1">
-                        <span className="text-3xl font-extrabold">{formatINR(plan.monthlyFeePaise)}</span>
-                        <span className={`text-xs ${isGold ? "text-slate-400" : "text-slate-500"}`}> / month</span>
+                        <span className="font-serif text-3xl font-bold">{formatINR(plan.monthlyFeePaise)}</span>
+                        <span className={`text-xs ${isGold ? "text-[#9CA3AF]" : "text-[#6B7280]"}`}> / month</span>
                       </div>
-                      <span className={`text-[11px] block mt-0.5 ${isGold ? "text-amber-300" : "text-emerald-600 dark:text-emerald-400"} font-medium`}>
-                        or {formatINR(plan.annualFeePaise)} / year (Save 17%)
+                      <span className={`text-[11px] block mt-0.5 ${isGold ? "text-[#DFCA9B]" : "text-[#8C6D23] dark:text-[#DFCA9B]"} font-medium`}>
+                        or {formatINR(plan.annualFeePaise)} / annum (17% Privileged Savings)
                       </span>
                     </div>
 
                     <ul className="space-y-3 text-xs">
                       {features.map((f: string, idx: number) => (
-                        <li key={idx} className="flex items-start gap-2">
+                        <li key={idx} className="flex items-start gap-2.5">
                           <CheckCircle2
-                            className={`w-4 h-4 shrink-0 mt-0.5 ${isGold ? "text-amber-400" : "text-emerald-500"}`}
+                            className={`w-4 h-4 shrink-0 mt-0.5 ${isGold ? "text-[#C5A059]" : "text-[#921111] dark:text-[#DFCA9B]"}`}
                           />
-                          <span>{f}</span>
+                          <span className="leading-snug">{f}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
 
-                  <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
-                    <Link
-                      href={`/login?tab=signup&tier=${plan.tier}`}
-                      className={`w-full py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  <div className="mt-8 pt-6 border-t border-[#E5DFD5] dark:border-[#222D3E]">
+                    <button
+                      onClick={() => setShowTrialModal(true)}
+                      className={`w-full py-3 rounded-md font-bold text-xs tracking-widest uppercase flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                         isGold
-                          ? "bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-md shadow-amber-400/20"
-                          : "bg-emerald-600 hover:bg-emerald-500 text-white"
+                          ? "bg-[#C5A059] hover:bg-[#B38E46] text-[#0B1320] shadow-sm"
+                          : "bg-[#921111] hover:bg-[#720C0C] text-white shadow-sm"
                       }`}
                     >
-                      <span>Join as {plan.tier} Member</span>
+                      <span>Apply for {plan.tier} Privilege</span>
                       <ArrowRight className="w-3.5 h-3.5" />
-                    </Link>
+                    </button>
                   </div>
                 </div>
               );
@@ -406,20 +420,22 @@ export default function PublicHomePage() {
         </div>
       </section>
 
-      {/* PRO SHOP & GEAR PREVIEW */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-10">
+      {/* PRO SHOP & DINING LOUNGE PREVIEW */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-12">
           <div>
-            <h2 className="text-xs uppercase font-bold text-purple-600 dark:text-purple-400 tracking-wider">
-              Champions Pro Gear Shop
+            <span className="text-[10px] uppercase font-bold text-[#8C6D23] dark:text-[#DFCA9B] tracking-[0.24em] block">
+              Clubhouse Amenities
+            </span>
+            <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#0B1320] dark:text-white">
+              Official Pro Shop & Dining Quarters
             </h2>
-            <h3 className="text-3xl font-extrabold text-slate-900 dark:text-white">Authorised Equipment & Apparel</h3>
           </div>
           <Link
             href="/portal"
-            className="text-xs font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1"
+            className="text-xs font-bold text-[#921111] dark:text-[#DFCA9B] hover:underline flex items-center gap-1.5 tracking-wider uppercase"
           >
-            Browse Full Catalog & Click & Collect <ChevronRight className="w-3.5 h-3.5" />
+            Access Member Catalog & Ordering <ChevronRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
@@ -427,24 +443,24 @@ export default function PublicHomePage() {
           {products.map((p) => (
             <div
               key={p.id}
-              className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between"
+              className="p-5 rounded-lg bg-white dark:bg-[#0E1522] border border-[#E5DFD5] dark:border-[#222D3E] shadow-sm hover:border-[#C5A059] transition-all flex flex-col justify-between"
             >
               <div>
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
+                <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-[#FAF8F5] dark:bg-[#162032] border border-[#E5DFD5] dark:border-[#263244] text-[#8C6D23]">
                   {p.brand} • {p.category}
                 </span>
-                <h4 className="font-bold text-sm text-slate-900 dark:text-white mt-2 line-clamp-2">{p.name}</h4>
-                <span className="text-xs text-slate-500 dark:text-slate-400 block mt-1">SKU: {p.sku}</span>
+                <h4 className="font-serif font-bold text-sm text-[#0B1320] dark:text-white mt-2.5 line-clamp-2">{p.name}</h4>
+                <span className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] block mt-1 font-mono">SKU: {p.sku}</span>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <div className="mt-4 pt-3 border-t border-[#E5DFD5] dark:border-[#222D3E] flex items-center justify-between">
                 <div>
-                  <span className="text-xs font-bold text-slate-900 dark:text-white">{formatINR(p.pricePaise)}</span>
-                  <span className="text-[10px] text-emerald-600 block">Up to 15% Member Discount</span>
+                  <span className="font-serif text-sm font-bold text-[#0B1320] dark:text-white">{formatINR(p.pricePaise)}</span>
+                  <span className="text-[10px] text-[#8C6D23] dark:text-[#DFCA9B] block font-medium">15% Member Allowance</span>
                 </div>
                 <Link
                   href="/portal"
-                  className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-purple-600 hover:text-white transition-colors"
+                  className="p-2 rounded-md bg-[#FAF8F5] dark:bg-[#162032] border border-[#E5DFD5] dark:border-[#263244] text-[#4B5563] dark:text-[#D1D5DB] hover:bg-[#921111] hover:text-white transition-colors"
                 >
                   <ShoppingBag className="w-4 h-4" />
                 </Link>
@@ -454,132 +470,147 @@ export default function PublicHomePage() {
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="bg-slate-900 text-slate-400 text-xs py-12 px-4 sm:px-6 lg:px-8 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
+      {/* FOOTER - Classic NYAC 4-Column Design */}
+      <footer className="bg-[#0B1320] text-[#D1D5DB] text-xs py-14 px-4 sm:px-6 lg:px-8 border-t border-[#1F293D]">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10">
           <div>
-            <div className="flex items-center gap-2 text-white font-bold text-base mb-3">
-              <Trophy className="w-5 h-5 text-emerald-500" />
-              The Champions Club
+            <div className="flex items-center gap-2.5 text-white font-serif font-bold text-lg mb-3">
+              <div className="w-8 h-8 rounded bg-[#921111] text-[#C5A059] border border-[#C5A059]/40 flex items-center justify-center">
+                <Trophy className="w-4 h-4" />
+              </div>
+              <span>The Champions Club</span>
             </div>
-            <p className="text-slate-400 text-xs leading-relaxed">
-              Unified Sports Operations, High-Performance Racquet Sports, Gear Shop & Lounge.
+            <p className="text-[#9CA3AF] text-xs leading-relaxed font-light">
+              Premier athletic club operations, high-performance racquet sports, private pro shop, and distinguished clubhouse social dining.
             </p>
+            <div className="mt-4 text-[10px] uppercase tracking-[0.2em] text-[#C5A059] font-bold">
+              EST. 1868 • BANGALORE
+            </div>
           </div>
           <div>
-            <h5 className="font-bold text-white uppercase text-[11px] mb-3">Operating Hours</h5>
-            <ul className="space-y-1.5">
-              <li>Monday – Sunday: 6:00 AM – 11:00 PM</li>
-              <li>Pro Shop: 7:00 AM – 10:00 PM</li>
-              <li>Bar & Cafeteria: 6:30 AM – 10:30 PM</li>
+            <h5 className="font-serif font-bold text-white uppercase text-xs tracking-wider mb-3.5">Operating Schedule</h5>
+            <ul className="space-y-2 text-[#9CA3AF]">
+              <li>Championship Courts: 06:00 – 23:00</li>
+              <li>Official Pro Shop: 07:00 – 22:00</li>
+              <li>Clubhouse Dining & Bar: 06:30 – 22:30</li>
+              <li>Front Reception Desk: 06:00 – 22:00</li>
             </ul>
           </div>
           <div>
-            <h5 className="font-bold text-white uppercase text-[11px] mb-3">Contact Desk</h5>
-            <ul className="space-y-1.5">
+            <h5 className="font-serif font-bold text-white uppercase text-xs tracking-wider mb-3.5">Club Quarters</h5>
+            <ul className="space-y-2 text-[#9CA3AF]">
               <li className="flex items-center gap-2">
-                <MapPin className="w-3.5 h-3.5 text-emerald-500" />
-                Plot 42, Sport City Blvd, Bangalore
+                <MapPin className="w-3.5 h-3.5 text-[#C5A059]" />
+                Plot 42, Sport City Boulevard, Bangalore
               </li>
               <li className="flex items-center gap-2">
-                <Phone className="w-3.5 h-3.5 text-emerald-500" />
+                <Phone className="w-3.5 h-3.5 text-[#C5A059]" />
                 +91 80 2345 6789
               </li>
               <li className="flex items-center gap-2">
-                <Mail className="w-3.5 h-3.5 text-emerald-500" />
-                info@championsclub.in
+                <Mail className="w-3.5 h-3.5 text-[#C5A059]" />
+                secretary@championsclub.in
               </li>
             </ul>
           </div>
           <div>
-            <h5 className="font-bold text-white uppercase text-[11px] mb-3">Member & Staff Portals</h5>
-            <div className="space-y-2">
+            <h5 className="font-serif font-bold text-white uppercase text-xs tracking-wider mb-3.5">Member & Staff Access</h5>
+            <div className="space-y-2.5">
               <Link
                 href="/app/dashboard"
-                className="block px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-medium transition-colors"
+                className="block px-3.5 py-2.5 rounded-md bg-[#162032] hover:bg-[#1E293B] border border-[#263244] text-[#FAF8F5] text-xs font-semibold tracking-wide uppercase transition-colors"
               >
                 Staff Operations Portal →
               </Link>
               <Link
                 href="/portal"
-                className="block px-3 py-2 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 font-medium transition-colors"
+                className="block px-3.5 py-2.5 rounded-md bg-[#921111]/80 hover:bg-[#921111] text-[#FAF8F5] text-xs font-semibold tracking-wide uppercase transition-colors"
               >
                 Member Self-Service Portal →
               </Link>
             </div>
           </div>
         </div>
+
+        <div className="max-w-7xl mx-auto mt-12 pt-6 border-t border-[#1F293D] flex flex-col sm:flex-row items-center justify-between text-[#6B7280] text-[11px]">
+          <p>© 2026 The Champions Club. All Rights Reserved. Private Athletic Club Operations.</p>
+          <p className="mt-2 sm:mt-0 font-serif italic text-[#C5A059]/80">"Great things are expected of you when you wear the winged foot."</p>
+        </div>
       </footer>
 
-      {/* COMPLIMENTARY TRIAL MODAL */}
+      {/* COMPLIMENTARY TRIAL MODAL - NYAC Design */}
       {showTrialModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Book a Complimentary Trial Session</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Experience the courts and club amenities for 60 minutes free of charge.
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0E1522] border border-[#E5DFD5] dark:border-[#222D3E] rounded-lg max-w-md w-full p-6 shadow-xl relative">
+            <span className="text-[9px] font-bold uppercase tracking-[0.24em] text-[#8C6D23] dark:text-[#DFCA9B] block mb-1">
+              Private Guest Invitation
+            </span>
+            <h3 className="font-serif text-xl font-bold text-[#0B1320] dark:text-white">Complimentary Trial Session</h3>
+            <div className="w-10 h-0.5 bg-[#C5A059] my-2" />
+            <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
+              Experience our championship courts and clubhouse hospitality for 60 minutes with full club host coordination.
             </p>
 
             {trialSuccess ? (
-              <div className="my-6 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200 text-xs space-y-2">
-                <div className="font-bold flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  Trial Booking Confirmed!
+              <div className="my-6 p-4 rounded-md bg-[#FAF7EE] dark:bg-[#1C1608] border border-[#DFCA9B] dark:border-[#4B3C18] text-[#8C6D23] dark:text-[#E3CEA4] text-xs space-y-2">
+                <div className="font-serif font-bold text-sm flex items-center gap-1.5 text-[#0B1320] dark:text-white">
+                  <CheckCircle2 className="w-4 h-4 text-[#C5A059]" />
+                  Trial Invitation Confirmed!
                 </div>
-                <p>
-                  We have reserved your slot and assigned a club host. Our front desk will WhatsApp your access pass.
+                <p className="leading-relaxed">
+                  Your provisional reservation has been logged. Our Front Desk concierge will contact you via WhatsApp with digital pass instructions.
                 </p>
                 <button
                   onClick={() => setShowTrialModal(false)}
-                  className="w-full mt-3 py-2 rounded-lg bg-emerald-600 text-white font-bold"
+                  className="w-full mt-3 py-2 rounded-md bg-[#921111] text-white font-bold tracking-widest uppercase text-xs"
                 >
-                  Done
+                  Close Confirmation
                 </button>
               </div>
             ) : (
               <form onSubmit={handleBookTrial} className="space-y-3 mt-4 text-xs">
                 <div>
-                  <label className="font-semibold block mb-1">Your Full Name</label>
+                  <label className="font-semibold block mb-1 uppercase tracking-wider text-[10px] text-[#4B5563] dark:text-[#9CA3AF]">Your Full Name</label>
                   <input
                     required
                     type="text"
                     value={trialName}
                     onChange={(e) => setTrialName(e.target.value)}
                     placeholder="e.g. Siddharth Rao"
-                    className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800"
+                    className="w-full p-2.5 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] focus:border-[#C5A059] focus:outline-none"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="font-semibold block mb-1">WhatsApp / Phone</label>
+                    <label className="font-semibold block mb-1 uppercase tracking-wider text-[10px] text-[#4B5563] dark:text-[#9CA3AF]">WhatsApp / Phone</label>
                     <input
                       required
                       type="tel"
                       value={trialPhone}
                       onChange={(e) => setTrialPhone(e.target.value)}
                       placeholder="+91 98765 00000"
-                      className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800"
+                      className="w-full p-2.5 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] focus:border-[#C5A059] focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="font-semibold block mb-1">Email</label>
+                    <label className="font-semibold block mb-1 uppercase tracking-wider text-[10px] text-[#4B5563] dark:text-[#9CA3AF]">Email Address</label>
                     <input
                       required
                       type="email"
                       value={trialEmail}
                       onChange={(e) => setTrialEmail(e.target.value)}
                       placeholder="siddharth@example.com"
-                      className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800"
+                      className="w-full p-2.5 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] focus:border-[#C5A059] focus:outline-none"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="font-semibold block mb-1">Sport Interest</label>
+                    <label className="font-semibold block mb-1 uppercase tracking-wider text-[10px] text-[#4B5563] dark:text-[#9CA3AF]">Sport Discipline</label>
                     <select
                       value={trialSport}
                       onChange={(e) => setTrialSport(e.target.value)}
-                      className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800"
+                      className="w-full p-2.5 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] focus:border-[#C5A059] focus:outline-none"
                     >
                       <option value="Padel">Padel 🏸</option>
                       <option value="Tennis">Tennis 🎾</option>
@@ -588,12 +619,12 @@ export default function PublicHomePage() {
                     </select>
                   </div>
                   <div>
-                    <label className="font-semibold block mb-1">Preferred Date</label>
+                    <label className="font-semibold block mb-1 uppercase tracking-wider text-[10px] text-[#4B5563] dark:text-[#9CA3AF]">Preferred Date</label>
                     <input
                       type="date"
                       value={trialDate}
                       onChange={(e) => setTrialDate(e.target.value)}
-                      className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800"
+                      className="w-full p-2.5 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] focus:border-[#C5A059] focus:outline-none"
                     />
                   </div>
                 </div>
@@ -602,15 +633,15 @@ export default function PublicHomePage() {
                   <button
                     type="button"
                     onClick={() => setShowTrialModal(false)}
-                    className="flex-1 py-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold"
+                    className="flex-1 py-2.5 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-white dark:bg-[#162032] text-[#4B5563] dark:text-[#D1D5DB] font-semibold tracking-wider uppercase text-xs"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
+                    className="flex-1 py-2.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold tracking-widest uppercase text-xs shadow-sm transition-all"
                   >
-                    Confirm Trial
+                    Confirm Invitation
                   </button>
                 </div>
               </form>
@@ -619,74 +650,80 @@ export default function PublicHomePage() {
         </div>
       )}
 
-      {/* CORPORATE QUOTE REQUEST MODAL */}
+      {/* CORPORATE QUOTE REQUEST MODAL - NYAC Design */}
       {showQuoteModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Corporate & Event Quote Request</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Custom packages for corporate tournaments, team offsites, and group memberships.
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0E1522] border border-[#E5DFD5] dark:border-[#222D3E] rounded-lg max-w-md w-full p-6 shadow-xl relative">
+            <span className="text-[9px] font-bold uppercase tracking-[0.24em] text-[#8C6D23] dark:text-[#DFCA9B] block mb-1">
+              Private Corporate Quarters
+            </span>
+            <h3 className="font-serif text-xl font-bold text-[#0B1320] dark:text-white">Corporate Inquiries & Events</h3>
+            <div className="w-10 h-0.5 bg-[#C5A059] my-2" />
+            <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
+              Custom packages for executive tournament days, corporate team retreats, and privileged firm accounts.
             </p>
 
             {quoteSuccess ? (
-              <div className="my-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-950 text-amber-800 dark:text-amber-200 text-xs space-y-2">
-                <div className="font-bold flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-amber-600" />
-                  Quote Request Received!
+              <div className="my-6 p-4 rounded-md bg-[#FAF7EE] dark:bg-[#1C1608] border border-[#DFCA9B] dark:border-[#4B3C18] text-[#8C6D23] dark:text-[#E3CEA4] text-xs space-y-2">
+                <div className="font-serif font-bold text-sm flex items-center gap-1.5 text-[#0B1320] dark:text-white">
+                  <CheckCircle2 className="w-4 h-4 text-[#C5A059]" />
+                  Inquiry Dispatched Successfully!
                 </div>
-                <p>Our Corporate Sales Manager will generate a customized PDF proposal and contact you within 4 hours.</p>
+                <p className="leading-relaxed">
+                  Our Corporate Secretary will prepare an official PDF proposal and contact your office within 4 business hours.
+                </p>
                 <button
                   onClick={() => setShowQuoteModal(false)}
-                  className="w-full mt-3 py-2 rounded-lg bg-amber-600 text-white font-bold"
+                  className="w-full mt-3 py-2 rounded-md bg-[#921111] text-white font-bold tracking-widest uppercase text-xs"
                 >
-                  Done
+                  Close
                 </button>
               </div>
             ) : (
               <form onSubmit={handleRequestQuote} className="space-y-3 mt-4 text-xs">
                 <div>
-                  <label className="font-semibold block mb-1">Company / Organization</label>
+                  <label className="font-semibold block mb-1 uppercase tracking-wider text-[10px] text-[#4B5563] dark:text-[#9CA3AF]">Company / Corporation</label>
                   <input
                     required
                     type="text"
                     value={quoteCompany}
                     onChange={(e) => setQuoteCompany(e.target.value)}
-                    placeholder="e.g. Infosys Technologies"
-                    className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800"
+                    placeholder="e.g. Infosys Technologies Ltd."
+                    className="w-full p-2.5 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] focus:border-[#C5A059] focus:outline-none"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="font-semibold block mb-1">Contact Person</label>
+                    <label className="font-semibold block mb-1 uppercase tracking-wider text-[10px] text-[#4B5563] dark:text-[#9CA3AF]">Contact Officer</label>
                     <input
                       required
                       type="text"
                       value={quoteName}
                       onChange={(e) => setQuoteName(e.target.value)}
                       placeholder="Name"
-                      className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800"
+                      className="w-full p-2.5 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] focus:border-[#C5A059] focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="font-semibold block mb-1">Phone</label>
+                    <label className="font-semibold block mb-1 uppercase tracking-wider text-[10px] text-[#4B5563] dark:text-[#9CA3AF]">Official Telephone</label>
                     <input
                       required
                       type="tel"
                       value={quotePhone}
                       onChange={(e) => setQuotePhone(e.target.value)}
                       placeholder="+91 98000 00000"
-                      className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800"
+                      className="w-full p-2.5 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] focus:border-[#C5A059] focus:outline-none"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="font-semibold block mb-1">Estimated Players & Requirements</label>
+                  <label className="font-semibold block mb-1 uppercase tracking-wider text-[10px] text-[#4B5563] dark:text-[#9CA3AF]">Estimated Roster & Requirements</label>
                   <textarea
                     rows={3}
                     value={quoteRequirements}
                     onChange={(e) => setQuoteRequirements(e.target.value)}
-                    placeholder="e.g. 25 players, weekend tournament with catering & coach coordination"
-                    className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800"
+                    placeholder="e.g. 25 players, weekend padel & badminton tournament with lounge dining coordination"
+                    className="w-full p-2.5 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] focus:border-[#C5A059] focus:outline-none"
                   />
                 </div>
 
@@ -694,15 +731,15 @@ export default function PublicHomePage() {
                   <button
                     type="button"
                     onClick={() => setShowQuoteModal(false)}
-                    className="flex-1 py-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold"
+                    className="flex-1 py-2.5 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-white dark:bg-[#162032] text-[#4B5563] dark:text-[#D1D5DB] font-semibold tracking-wider uppercase text-xs"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold"
+                    className="flex-1 py-2.5 rounded-md bg-[#C5A059] hover:bg-[#B38E46] text-[#0B1320] font-bold tracking-widest uppercase text-xs shadow-sm transition-all"
                   >
-                    Submit Request
+                    Submit Proposal Request
                   </button>
                 </div>
               </form>

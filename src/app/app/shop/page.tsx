@@ -217,50 +217,54 @@ export default function ShopManagementPage({
   });
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto font-sans">
       {/* HEADER & TABS */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-[#E5DFD5] dark:border-[#222D3E]">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Gear Shop & Inventory
-            </h1>
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 font-bold">
-              ONE INVENTORY TRUTH
+          <div className="flex items-center gap-2.5">
+            <span className="text-[10px] uppercase tracking-[0.25em] font-bold text-[#8C6D23] dark:text-[#DFCA9B]">
+              Athletic Equipment & Apparel
+            </span>
+            <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-[#C5A059]/15 text-[#8C6D23] dark:text-[#DFCA9B] border border-[#C5A059]/30 font-bold uppercase tracking-wider">
+              Single Inventory Source
             </span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Counter POS checkout, stock decrement ledger, click & collect orders, and racket stringing service.
+          <h1 className="text-2xl md:text-3xl font-serif font-bold text-[#0B1320] dark:text-white tracking-tight mt-1">
+            Pro Shop & Racket Service
+          </h1>
+          <p className="text-xs text-[#5A6578] dark:text-[#8E9CAE] mt-1">
+            Official club merchandise, stringing workshop, inventory decrement ledger, and counter POS register.
           </p>
         </div>
 
-        <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold">
+        {/* VIEW TABS */}
+        <div className="flex bg-[#E5DFD5]/40 dark:bg-[#131C2E] p-1 rounded-lg border border-[#E5DFD5] dark:border-[#222D3E] text-xs">
           <button
             onClick={() => setActiveTab("POS")}
-            className={`px-3 py-1.5 rounded-lg transition-all ${
+            className={`px-4 py-2 rounded font-bold text-xs uppercase tracking-wider transition-all ${
               activeTab === "POS"
-                ? "bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-300 shadow-sm font-bold"
-                : "text-slate-600 dark:text-slate-400"
+                ? "bg-[#921111] text-white shadow-sm"
+                : "text-[#5A6578] dark:text-[#8E9CAE] hover:text-[#0B1320] dark:hover:text-white"
             }`}
           >
             Counter POS
           </button>
           <button
             onClick={() => setActiveTab("ORDERS")}
-            className={`px-3 py-1.5 rounded-lg transition-all ${
+            className={`px-4 py-2 rounded font-bold text-xs uppercase tracking-wider transition-all ${
               activeTab === "ORDERS"
-                ? "bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-300 shadow-sm font-bold"
-                : "text-slate-600 dark:text-slate-400"
+                ? "bg-[#921111] text-white shadow-sm"
+                : "text-[#5A6578] dark:text-[#8E9CAE] hover:text-[#0B1320] dark:hover:text-white"
             }`}
           >
             Fulfillment ({orders.length})
           </button>
           <button
             onClick={() => setActiveTab("STRINGING")}
-            className={`px-3 py-1.5 rounded-lg transition-all ${
+            className={`px-4 py-2 rounded font-bold text-xs uppercase tracking-wider transition-all ${
               activeTab === "STRINGING"
-                ? "bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-300 shadow-sm font-bold"
-                : "text-slate-600 dark:text-slate-400"
+                ? "bg-[#921111] text-white shadow-sm"
+                : "text-[#5A6578] dark:text-[#8E9CAE] hover:text-[#0B1320] dark:hover:text-white"
             }`}
           >
             Stringing Queue ({serviceJobs.length})
@@ -275,15 +279,15 @@ export default function ShopManagementPage({
           <div className="lg:col-span-2 space-y-4">
             {/* Category pills & Search */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="flex overflow-x-auto bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs w-full sm:w-auto">
+              <div className="flex overflow-x-auto bg-[#F4F1EA] dark:bg-[#131C2E] p-1 rounded-lg border border-[#E5DFD5] dark:border-[#222D3E] w-full sm:w-auto">
                 {["ALL", "RACKETS", "BALLS", "SHOES", "APPAREL", "ACCESSORIES"].map((c) => (
                   <button
                     key={c}
                     onClick={() => setSelectedCategory(c)}
-                    className={`px-2.5 py-1 rounded-lg font-bold text-[11px] whitespace-nowrap ${
+                    className={`px-3 py-1.5 rounded font-bold text-[10px] uppercase tracking-wider whitespace-nowrap transition-all ${
                       selectedCategory === c
-                        ? "bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-300 shadow-xs"
-                        : "text-slate-500"
+                        ? "bg-[#0B1320] text-[#C5A059] dark:bg-[#C5A059] dark:text-[#0B1320] shadow-xs"
+                        : "text-[#5A6578] dark:text-[#8E9CAE] hover:text-[#0B1320] dark:hover:text-white"
                     }`}
                   >
                     {c}
@@ -292,13 +296,13 @@ export default function ShopManagementPage({
               </div>
 
               <div className="relative w-full sm:w-64">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#8E9CAE]" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search item, SKU, brand..."
-                  className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs"
+                  className="w-full pl-8 pr-3 py-2 rounded-lg border border-[#E5DFD5] dark:border-[#222D3E] bg-white dark:bg-[#0E1726] text-xs text-[#0B1320] dark:text-white placeholder-[#8E9CAE] focus:outline-none focus:border-[#C5A059]"
                 />
               </div>
             </div>
@@ -311,33 +315,35 @@ export default function ShopManagementPage({
                 return (
                   <div
                     key={p.id}
-                    className={`p-4 rounded-2xl bg-white dark:bg-slate-900 border shadow-xs flex flex-col justify-between ${
+                    className={`p-4 rounded-xl bg-white dark:bg-[#0E1726] border flex flex-col justify-between transition-all hover:border-[#C5A059]/60 shadow-sm ${
                       isLowStock
-                        ? "border-amber-300 dark:border-amber-800/80"
-                        : "border-slate-200 dark:border-slate-800"
+                        ? "border-amber-300 dark:border-amber-700/60"
+                        : "border-[#E5DFD5] dark:border-[#222D3E]"
                     }`}
                   >
                     <div>
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
+                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[#FAF8F5] dark:bg-[#131C2E] border border-[#E5DFD5] dark:border-[#222D3E] text-[#8C6D23] dark:text-[#DFCA9B] uppercase tracking-wider">
                           {p.brand}
                         </span>
                         {isLowStock && (
-                          <span className="text-[10px] font-bold text-amber-600 flex items-center gap-1">
+                          <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1 uppercase tracking-wider">
                             <AlertTriangle className="w-3 h-3" />
                             Low Stock
                           </span>
                         )}
                       </div>
-                      <h4 className="font-bold text-sm text-slate-900 dark:text-white mt-2">{p.name}</h4>
-                      <span className="text-xs font-bold text-slate-900 dark:text-white block mt-1">
+                      <h4 className="font-serif font-bold text-base text-[#0B1320] dark:text-white mt-2 leading-snug">
+                        {p.name}
+                      </h4>
+                      <div className="text-sm font-bold text-[#921111] dark:text-[#DFCA9B] mt-1 font-mono">
                         {formatINR(p.pricePaise)}
-                      </span>
+                      </div>
                     </div>
 
                     {/* Variant Stock buttons */}
-                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 space-y-1.5">
-                      <span className="text-[10px] text-slate-400 font-semibold block uppercase">
+                    <div className="mt-4 pt-3 border-t border-[#E5DFD5]/60 dark:border-[#222D3E] space-y-1.5">
+                      <span className="text-[9px] text-[#8E9CAE] font-bold uppercase tracking-wider block">
                         Select Variant to Add:
                       </span>
                       <div className="flex flex-wrap gap-1.5">
@@ -346,14 +352,14 @@ export default function ShopManagementPage({
                             key={v.id}
                             disabled={v.stockQuantity <= 0}
                             onClick={() => addToCart(p, v)}
-                            className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-purple-50 dark:hover:bg-purple-950/60 text-slate-700 dark:text-slate-300 text-[11px] font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-40"
+                            className="px-2.5 py-1 rounded border border-[#E5DFD5] dark:border-[#222D3E] hover:border-[#C5A059] hover:bg-[#C5A059]/10 text-[#0B1320] dark:text-[#DFCA9B] text-[11px] font-semibold flex items-center gap-1.5 transition-all disabled:opacity-30 disabled:hover:border-[#E5DFD5] disabled:hover:bg-transparent"
                           >
                             <span>{v.size || v.color || "Standard"}</span>
                             <span
-                              className={`text-[9px] px-1 rounded font-mono ${
+                              className={`text-[9px] px-1 py-0.2 rounded font-mono ${
                                 v.stockQuantity <= p.reorderLevel
-                                  ? "bg-amber-100 text-amber-800"
-                                  : "bg-slate-100 dark:bg-slate-800 text-slate-500"
+                                  ? "bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold"
+                                  : "bg-[#FAF8F5] dark:bg-[#131C2E] text-[#5A6578] dark:text-[#8E9CAE]"
                               }`}
                             >
                               {v.stockQuantity} left
@@ -369,32 +375,41 @@ export default function ShopManagementPage({
           </div>
 
           {/* POS COUNTER CART & CHECKOUT */}
-          <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-5 sticky top-20">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Counter Register</h3>
-              <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
+          <div className="p-6 rounded-xl bg-white dark:bg-[#0E1726] border border-[#E5DFD5] dark:border-[#222D3E] shadow-md space-y-5 sticky top-20">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E5DFD5] dark:border-[#222D3E]">
+              <div>
+                <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-[#8C6D23] dark:text-[#DFCA9B] block">
+                  Point of Sale
+                </span>
+                <h3 className="text-base font-serif font-bold text-[#0B1320] dark:text-white">
+                  Counter Register
+                </h3>
+              </div>
+              <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-[#C5A059]/15 text-[#8C6D23] dark:text-[#DFCA9B] border border-[#C5A059]/30">
                 {cart.length} ITEMS
               </span>
             </div>
 
             {saleSuccess ? (
-              <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-100 text-xs space-y-3">
+              <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-100 text-xs space-y-3">
                 <div className="font-bold flex items-center gap-2 text-sm">
                   <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                   Sale Completed: #{saleSuccess.orderNumber}
                 </div>
-                <p>Total Paid: <strong>{formatINR(saleSuccess.finalPricePaise)}</strong> ({saleSuccess.paymentMethod})</p>
+                <p>
+                  Total Settled: <strong>{formatINR(saleSuccess.finalPricePaise)}</strong> ({saleSuccess.paymentMethod})
+                </p>
                 <div className="flex gap-2 pt-2">
                   <button
                     onClick={() => window.print()}
-                    className="flex-1 py-2 rounded-lg bg-white dark:bg-slate-800 border text-slate-800 dark:text-slate-200 font-semibold flex items-center justify-center gap-1.5"
+                    className="flex-1 py-2 rounded border border-[#E5DFD5] dark:border-[#222D3E] bg-white dark:bg-[#131C2E] text-[#0B1320] dark:text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5"
                   >
                     <Printer className="w-3.5 h-3.5" />
                     Receipt
                   </button>
                   <button
                     onClick={() => setSaleSuccess(null)}
-                    className="flex-1 py-2 rounded-lg bg-emerald-600 text-white font-bold"
+                    className="flex-1 py-2 rounded bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider"
                   >
                     New Sale
                   </button>
@@ -403,26 +418,28 @@ export default function ShopManagementPage({
             ) : (
               <form onSubmit={handleExecuteSale} className="space-y-4 text-xs">
                 {saleError && (
-                  <div className="p-2.5 rounded-lg bg-red-50 dark:bg-red-950 text-red-700 text-xs">
+                  <div className="p-2.5 rounded bg-red-50 dark:bg-red-950/40 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-xs">
                     {saleError}
                   </div>
                 )}
 
                 {/* Member Selector for Auto Discount */}
                 <div>
-                  <label className="font-semibold block mb-1">Customer / Member</label>
+                  <label className="font-bold uppercase tracking-wider text-[10px] text-[#5A6578] dark:text-[#8E9CAE] block mb-1">
+                    Customer / Member Credential
+                  </label>
                   <select
                     value={selectedMemberId}
                     onChange={(e) => setSelectedMemberId(e.target.value)}
-                    className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 font-semibold"
+                    className="w-full p-2.5 rounded-lg border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#131C2E] font-medium text-xs text-[#0B1320] dark:text-white focus:outline-none focus:border-[#C5A059]"
                   >
-                    <option value="">Walk-in Customer (0% Discount)</option>
+                    <option value="">Walk-in Guest (Standard Tariff)</option>
                     {members.map((m) => {
                       const tier = m.memberships?.[0]?.tier || "MEMBER";
                       const disc = calculateShopDiscount(tier);
                       return (
                         <option key={m.id} value={m.id}>
-                          {m.name} ({tier} — {disc}% Off)
+                          {m.name} ({tier} — {disc}% Club Privilege)
                         </option>
                       );
                     })}
@@ -430,38 +447,38 @@ export default function ShopManagementPage({
                 </div>
 
                 {/* Cart Line Items */}
-                <div className="max-h-56 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 border-y border-slate-100 dark:border-slate-800 py-2 space-y-2">
+                <div className="max-h-56 overflow-y-auto divide-y divide-[#E5DFD5]/60 dark:divide-[#222D3E] border-y border-[#E5DFD5] dark:border-[#222D3E] py-2 space-y-2">
                   {cart.length === 0 ? (
-                    <p className="text-slate-400 py-6 text-center">Cart is empty. Click a variant on the left.</p>
+                    <p className="text-[#8E9CAE] py-6 text-center italic">Register cart is empty. Add equipment variants from shelf.</p>
                   ) : (
                     cart.map((item) => (
                       <div key={item.variantId} className="pt-2 flex items-center justify-between">
                         <div>
-                          <div className="font-bold text-slate-800 dark:text-slate-200">{item.productName}</div>
-                          <span className="text-[10px] text-slate-400">
+                          <div className="font-bold text-[#0B1320] dark:text-white">{item.productName}</div>
+                          <span className="text-[10px] text-[#8E9CAE]">
                             {item.variantName} • {formatINR(item.unitPricePaise)}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           <button
                             type="button"
                             onClick={() => updateCartQty(item.variantId, item.quantity - 1)}
-                            className="p-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600"
+                            className="p-1 rounded border border-[#E5DFD5] dark:border-[#222D3E] hover:bg-[#FAF8F5] dark:hover:bg-[#131C2E] text-[#0B1320] dark:text-white"
                           >
                             <Minus className="w-3 h-3" />
                           </button>
-                          <span className="font-mono font-bold w-4 text-center">{item.quantity}</span>
+                          <span className="font-mono font-bold w-5 text-center text-xs">{item.quantity}</span>
                           <button
                             type="button"
                             onClick={() => updateCartQty(item.variantId, item.quantity + 1)}
-                            className="p-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600"
+                            className="p-1 rounded border border-[#E5DFD5] dark:border-[#222D3E] hover:bg-[#FAF8F5] dark:hover:bg-[#131C2E] text-[#0B1320] dark:text-white"
                           >
                             <Plus className="w-3 h-3" />
                           </button>
                           <button
                             type="button"
                             onClick={() => removeFromCart(item.variantId)}
-                            className="p-1 text-red-500 hover:text-red-700"
+                            className="p-1 text-red-600 hover:text-red-700 ml-1"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -473,32 +490,36 @@ export default function ShopManagementPage({
 
                 {/* Subtotal & Discount Calculation */}
                 <div className="space-y-1.5 text-xs">
-                  <div className="flex justify-between text-slate-500">
-                    <span>Subtotal:</span>
-                    <span>{formatINR(subtotalPaise)}</span>
+                  <div className="flex justify-between text-[#5A6578] dark:text-[#8E9CAE]">
+                    <span>Item Subtotal:</span>
+                    <span className="font-mono">{formatINR(subtotalPaise)}</span>
                   </div>
                   {discountPct > 0 && (
-                    <div className="flex justify-between text-emerald-600 font-semibold">
-                      <span>{memberTier} Tier Discount ({discountPct}%):</span>
-                      <span>-{formatINR(discountPaise)}</span>
+                    <div className="flex justify-between text-[#8C6D23] dark:text-[#DFCA9B] font-bold">
+                      <span>{memberTier} Tier Privilege (-{discountPct}%):</span>
+                      <span className="font-mono">-{formatINR(discountPaise)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-base font-extrabold text-slate-900 dark:text-white pt-2 border-t border-slate-200 dark:border-slate-800">
-                    <span>Total Payable:</span>
-                    <span className="text-purple-600">{formatINR(totalPaise)}</span>
+                  <div className="flex justify-between text-sm font-serif font-bold text-[#0B1320] dark:text-white pt-2 border-t border-[#E5DFD5] dark:border-[#222D3E]">
+                    <span>Total Due:</span>
+                    <span className="text-[#921111] dark:text-[#DFCA9B] font-mono text-base font-bold">
+                      {formatINR(totalPaise)}
+                    </span>
                   </div>
                 </div>
 
                 {/* Payment method */}
                 <div>
-                  <label className="font-semibold block mb-1">Payment Method</label>
+                  <label className="font-bold uppercase tracking-wider text-[10px] text-[#5A6578] dark:text-[#8E9CAE] block mb-1">
+                    Settlement Method
+                  </label>
                   <select
                     value={paymentMethod}
                     onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-full p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 font-semibold"
+                    className="w-full p-2.5 rounded-lg border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#131C2E] font-medium text-xs text-[#0B1320] dark:text-white focus:outline-none focus:border-[#C5A059]"
                   >
-                    <option value="UPI">UPI (QR Code)</option>
-                    <option value="CASH">Cash Drawer</option>
+                    <option value="UPI">UPI Digital Payment</option>
+                    <option value="CASH">Counter Cash</option>
                     <option value="CARD">Credit / Debit Card</option>
                   </select>
                 </div>
@@ -506,7 +527,7 @@ export default function ShopManagementPage({
                 <button
                   type="submit"
                   disabled={cart.length === 0}
-                  className="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm shadow-md shadow-purple-600/20 active:scale-95 transition-all disabled:opacity-50"
+                  className="w-full py-3 rounded bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-widest shadow-md transition-all disabled:opacity-40"
                 >
                   Charge {formatINR(totalPaise)} & Decrement Stock
                 </button>
@@ -518,35 +539,46 @@ export default function ShopManagementPage({
 
       {/* FULFILLMENT TAB */}
       {activeTab === "ORDERS" && (
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-          <h3 className="text-base font-bold text-slate-900 dark:text-white">Click & Collect Orders</h3>
+        <div className="p-6 rounded-xl bg-white dark:bg-[#0E1726] border border-[#E5DFD5] dark:border-[#222D3E] shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-[#8C6D23] dark:text-[#DFCA9B] block">
+                Dispatches
+              </span>
+              <h3 className="text-base font-serif font-bold text-[#0B1320] dark:text-white">
+                Click & Collect Orders
+              </h3>
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs text-left">
-              <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 font-semibold border-b">
+              <thead className="bg-[#FAF8F5] dark:bg-[#131C2E] text-[#5A6578] dark:text-[#8E9CAE] font-bold border-b border-[#E5DFD5] dark:border-[#222D3E]">
                 <tr>
                   <th className="p-3">Order #</th>
                   <th className="p-3">Customer</th>
-                  <th className="p-3">Items</th>
+                  <th className="p-3">Items Ordered</th>
                   <th className="p-3">Status</th>
                   <th className="p-3">Date</th>
                   <th className="p-3 text-right">Total (₹)</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              <tbody className="divide-y divide-[#E5DFD5]/60 dark:divide-[#222D3E]">
                 {orders.map((o) => (
-                  <tr key={o.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                    <td className="p-3 font-mono font-bold text-purple-600">{o.orderNumber}</td>
-                    <td className="p-3 font-semibold text-slate-900 dark:text-white">{o.customerName}</td>
-                    <td className="p-3 text-slate-600 dark:text-slate-400">
+                  <tr key={o.id} className="hover:bg-[#FAF8F5]/80 dark:hover:bg-[#131C2E]/50">
+                    <td className="p-3 font-mono font-bold text-[#921111] dark:text-[#DFCA9B]">{o.orderNumber}</td>
+                    <td className="p-3 font-bold text-[#0B1320] dark:text-white">{o.customerName}</td>
+                    <td className="p-3 text-[#5A6578] dark:text-[#8E9CAE]">
                       {o.items?.map((it: any) => `${it.quantity}x ${it.variant?.product?.name}`).join(", ")}
                     </td>
                     <td className="p-3">
-                      <span className="px-2 py-0.5 rounded font-bold uppercase bg-emerald-50 text-emerald-700 text-[10px]">
+                      <span className="px-2 py-0.5 rounded font-bold uppercase bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 text-[10px]">
                         {o.status}
                       </span>
                     </td>
-                    <td className="p-3 text-slate-500">{formatDateTime(o.createdAt)}</td>
-                    <td className="p-3 text-right font-bold">{formatINR(o.finalPricePaise)}</td>
+                    <td className="p-3 text-[#5A6578] dark:text-[#8E9CAE]">{formatDateTime(o.createdAt)}</td>
+                    <td className="p-3 text-right font-mono font-bold text-[#0B1320] dark:text-white">
+                      {formatINR(o.finalPricePaise)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -557,18 +589,25 @@ export default function ShopManagementPage({
 
       {/* STRINGING SERVICE QUEUE TAB */}
       {activeTab === "STRINGING" && (
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="p-6 rounded-xl bg-white dark:bg-[#0E1726] border border-[#E5DFD5] dark:border-[#222D3E] shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Racket Stringing Service Board</h3>
-              <p className="text-xs text-slate-500">"My string snapped 10 mins before play" express queue</p>
+              <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-[#8C6D23] dark:text-[#DFCA9B] block">
+                Technical Workshop
+              </span>
+              <h3 className="text-base font-serif font-bold text-[#0B1320] dark:text-white">
+                Racket Stringing Service Board
+              </h3>
+              <p className="text-xs text-[#5A6578] dark:text-[#8E9CAE]">
+                Express queue for match play restringing with tension calibration.
+              </p>
             </div>
             <button
               onClick={() => setShowStringModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-600 text-white font-bold text-xs"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider"
             >
-              <Plus className="w-4 h-4" />
-              <span>New Stringing Job</span>
+              <Plus className="w-3.5 h-3.5" />
+              <span>Queue Job Ticket</span>
             </button>
           </div>
 
@@ -576,26 +615,26 @@ export default function ShopManagementPage({
             {serviceJobs.map((job) => (
               <div
                 key={job.id}
-                className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 space-y-2 text-xs"
+                className="p-4 rounded-xl border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#131C2E] space-y-2 text-xs"
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-mono font-bold text-purple-600">{job.ticketNumber}</span>
+                  <span className="font-mono font-bold text-[#8C6D23] dark:text-[#DFCA9B]">{job.ticketNumber}</span>
                   {job.isExpress && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
                       ⚡ Express (2h)
                     </span>
                   )}
                 </div>
-                <div className="font-bold text-slate-900 dark:text-white">{job.racketDetails}</div>
-                <div className="text-slate-500 text-[11px]">
-                  Customer: <strong>{job.customerName}</strong> ({job.customerPhone})
+                <div className="font-serif font-bold text-sm text-[#0B1320] dark:text-white">{job.racketDetails}</div>
+                <div className="text-[#5A6578] dark:text-[#8E9CAE] text-[11px]">
+                  Customer: <strong className="text-[#0B1320] dark:text-white">{job.customerName}</strong> ({job.customerPhone})
                 </div>
-                <div className="text-slate-500 text-[11px]">
+                <div className="text-[#5A6578] dark:text-[#8E9CAE] text-[11px]">
                   Specs: {job.stringType} @ {job.tension}
                 </div>
-                <div className="pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                  <span className="font-bold text-emerald-600">{formatINR(job.costPaise)}</span>
-                  <span className="px-2 py-0.5 rounded font-bold uppercase text-[10px] bg-purple-100 text-purple-800">
+                <div className="pt-2 border-t border-[#E5DFD5] dark:border-[#222D3E] flex items-center justify-between">
+                  <span className="font-mono font-bold text-[#921111] dark:text-[#DFCA9B]">{formatINR(job.costPaise)}</span>
+                  <span className="px-2 py-0.5 rounded font-bold uppercase text-[9px] bg-[#C5A059]/15 text-[#8C6D23] dark:text-[#DFCA9B] border border-[#C5A059]/30">
                     {job.status}
                   </span>
                 </div>
@@ -607,53 +646,64 @@ export default function ShopManagementPage({
 
       {/* NEW STRINGING JOB MODAL */}
       {showStringModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">Create Racket Stringing Job Ticket</h3>
-            <form onSubmit={handleCreateStringJob} className="space-y-3 mt-4 text-xs">
+        <div className="fixed inset-0 bg-[#0B1320]/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0E1726] border border-[#C5A059]/50 rounded-xl max-w-md w-full p-6 shadow-2xl relative font-sans">
+            <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-[#8C6D23] dark:text-[#DFCA9B] block">
+              Workshop Ticket
+            </span>
+            <h3 className="text-lg font-serif font-bold text-[#0B1320] dark:text-white">
+              Queue Racket Stringing Job
+            </h3>
+            <form onSubmit={handleCreateStringJob} className="space-y-3.5 mt-4 text-xs">
               <div>
-                <label className="font-semibold block mb-1">Racket Model</label>
+                <label className="font-bold uppercase tracking-wider text-[10px] text-[#5A6578] dark:text-[#8E9CAE] block mb-1">
+                  Racket Model & Brand
+                </label>
                 <input
                   required
                   type="text"
                   value={racketDetails}
                   onChange={(e) => setRacketDetails(e.target.value)}
-                  placeholder="e.g. Wilson Pro Staff 97"
-                  className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800"
+                  placeholder="e.g. Wilson Pro Staff 97 v14"
+                  className="w-full p-2.5 rounded-lg border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#131C2E] text-xs text-[#0B1320] dark:text-white focus:outline-none focus:border-[#C5A059]"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-semibold block mb-1">String Type</label>
+                  <label className="font-bold uppercase tracking-wider text-[10px] text-[#5A6578] dark:text-[#8E9CAE] block mb-1">
+                    String Type
+                  </label>
                   <input
                     required
                     type="text"
                     value={stringType}
                     onChange={(e) => setStringType(e.target.value)}
-                    className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800"
+                    className="w-full p-2.5 rounded-lg border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#131C2E] text-xs text-[#0B1320] dark:text-white focus:outline-none focus:border-[#C5A059]"
                   />
                 </div>
                 <div>
-                  <label className="font-semibold block mb-1">Tension</label>
+                  <label className="font-bold uppercase tracking-wider text-[10px] text-[#5A6578] dark:text-[#8E9CAE] block mb-1">
+                    Tension
+                  </label>
                   <input
                     required
                     type="text"
                     value={tension}
                     onChange={(e) => setTension(e.target.value)}
                     placeholder="e.g. 54 lbs"
-                    className="w-full p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800"
+                    className="w-full p-2.5 rounded-lg border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#131C2E] text-xs text-[#0B1320] dark:text-white focus:outline-none focus:border-[#C5A059]"
                   />
                 </div>
               </div>
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200">
+              <div className="flex items-center gap-2 p-2.5 rounded-lg bg-[#C5A059]/15 border border-[#C5A059]/30 text-[#0B1320] dark:text-[#DFCA9B]">
                 <input
                   type="checkbox"
                   id="expressCheck"
                   checked={isExpress}
                   onChange={(e) => setIsExpress(e.target.checked)}
                 />
-                <label htmlFor="expressCheck" className="font-bold cursor-pointer">
-                  ⚡ Express Priority (Ready in 2 Hours — ₹1,200)
+                <label htmlFor="expressCheck" className="font-bold cursor-pointer text-xs">
+                  ⚡ Express Match Priority (Ready in 2 Hours — ₹1,200)
                 </label>
               </div>
 
@@ -661,13 +711,13 @@ export default function ShopManagementPage({
                 <button
                   type="button"
                   onClick={() => setShowStringModal(false)}
-                  className="flex-1 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 font-semibold"
+                  className="flex-1 py-2.5 rounded border border-[#E5DFD5] dark:border-[#222D3E] bg-white dark:bg-[#131C2E] text-[#0B1320] dark:text-white font-bold text-xs uppercase tracking-wider"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 rounded-lg bg-purple-600 text-white font-bold"
+                  className="flex-1 py-2.5 rounded bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider"
                 >
                   Queue Job
                 </button>

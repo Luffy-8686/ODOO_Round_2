@@ -23,11 +23,8 @@ import {
   UserCheck,
 } from "lucide-react";
 
-export default function BarManagementPage({
-  initialView = "TABLES",
-}: {
-  initialView?: "TABLES" | "POS" | "KDS" | "TABS" | "SHIFTS" | "EOD";
-}) {
+export default function BarManagementPage(props: any) {
+  const initialView: "TABLES" | "POS" | "KDS" | "TABS" | "SHIFTS" | "EOD" = props?.initialView || "TABLES";
   const { currentUser } = useAuth();
   const [tables, setTables] = useState<any[]>([]);
   const [menuItems, setMenuItems] = useState<any[]>([]);
@@ -242,50 +239,50 @@ export default function BarManagementPage({
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       {/* HEADER & VIEW SELECTOR */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-[#E5DFD5] dark:border-[#222D3E]">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Bar, Lounge & Cafeteria
+          <div className="flex items-center gap-2.5">
+            <h1 className="font-serif text-2xl font-bold text-[#0B1320] dark:text-white tracking-tight">
+              Clubhouse Dining, Bar & KDS
             </h1>
-            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-orange-100 dark:bg-orange-950 text-orange-700 dark:text-orange-300 font-bold">
+            <span className="text-[10px] font-mono px-2.5 py-0.5 rounded font-bold uppercase tracking-wider bg-[#C5A059]/15 text-[#8C6D23] dark:text-[#DFCA9B] border border-[#C5A059]/40">
               KDS & RUNNING TABS
             </span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Interactive table floor map, tablet ordering POS, live kitchen display, member running tabs, and EOD closing report.
+          <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] mt-0.5">
+            Interactive table floor map, tablet ordering POS, live kitchen display system, member running tabs, and EOD closing reconciliation.
           </p>
         </div>
 
-        <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold overflow-x-auto">
+        <div className="flex bg-[#FAF8F5] dark:bg-[#121A28] p-1 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] text-xs font-semibold overflow-x-auto">
           <button
             onClick={() => setActiveView("TABLES")}
-            className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap ${
-              activeView === "TABLES" ? "bg-white dark:bg-slate-700 text-orange-600 shadow-sm font-bold" : "text-slate-600"
+            className={`px-3 py-1.5 rounded-md transition-all whitespace-nowrap text-xs font-bold uppercase tracking-wider ${
+              activeView === "TABLES" ? "bg-[#921111] text-white shadow-xs font-bold" : "text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#0B1320]"
             }`}
           >
             Floor Map ({tables.length})
           </button>
           <button
             onClick={() => setActiveView("POS")}
-            className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap ${
-              activeView === "POS" ? "bg-white dark:bg-slate-700 text-orange-600 shadow-sm font-bold" : "text-slate-600"
+            className={`px-3 py-1.5 rounded-md transition-all whitespace-nowrap text-xs font-bold uppercase tracking-wider ${
+              activeView === "POS" ? "bg-[#921111] text-white shadow-xs font-bold" : "text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#0B1320]"
             }`}
           >
             Tablet POS
           </button>
           <button
             onClick={() => setActiveView("KDS")}
-            className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap ${
-              activeView === "KDS" ? "bg-white dark:bg-slate-700 text-orange-600 shadow-sm font-bold" : "text-slate-600"
+            className={`px-3 py-1.5 rounded-md transition-all whitespace-nowrap text-xs font-bold uppercase tracking-wider ${
+              activeView === "KDS" ? "bg-[#921111] text-white shadow-xs font-bold" : "text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#0B1320]"
             }`}
           >
             Live KDS ({kdsOrders.length})
           </button>
           <button
             onClick={() => setActiveView("TABS")}
-            className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap ${
-              activeView === "TABS" ? "bg-white dark:bg-slate-700 text-orange-600 shadow-sm font-bold" : "text-slate-600"
+            className={`px-3 py-1.5 rounded-md transition-all whitespace-nowrap text-xs font-bold uppercase tracking-wider ${
+              activeView === "TABS" ? "bg-[#921111] text-white shadow-xs font-bold" : "text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#0B1320]"
             }`}
           >
             Open Tabs ({openTabs.length})
@@ -295,8 +292,8 @@ export default function BarManagementPage({
               setActiveView("EOD");
               fetchEodReport();
             }}
-            className={`px-3 py-1.5 rounded-lg transition-all whitespace-nowrap ${
-              activeView === "EOD" ? "bg-white dark:bg-slate-700 text-orange-600 shadow-sm font-bold" : "text-slate-600"
+            className={`px-3 py-1.5 rounded-md transition-all whitespace-nowrap text-xs font-bold uppercase tracking-wider ${
+              activeView === "EOD" ? "bg-[#921111] text-white shadow-xs font-bold" : "text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#0B1320]"
             }`}
           >
             EOD Report
@@ -307,19 +304,19 @@ export default function BarManagementPage({
       {/* 1. TABLE FLOOR MAP VIEW */}
       {activeView === "TABLES" && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between p-4 rounded-xl bg-white dark:bg-slate-900 border text-xs">
+          <div className="flex items-center justify-between p-4 rounded-lg bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] text-xs">
             <div className="flex items-center gap-4">
-              <span className="font-bold text-slate-500 uppercase text-[10px]">Table Status:</span>
+              <span className="font-bold text-[#8C6D23] dark:text-[#DFCA9B] uppercase text-[10px] tracking-wider">Table Status:</span>
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                <span>Free (Tap to seat)</span>
+                <div className="w-2.5 h-2.5 rounded-full bg-[#C5A059]" />
+                <span className="text-[#0B1320] dark:text-white font-medium">Free (Tap to seat)</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-amber-500" />
-                <span>Occupied / Active Tab</span>
+                <div className="w-2.5 h-2.5 rounded-full bg-[#921111]" />
+                <span className="text-[#0B1320] dark:text-white font-medium">Occupied / Active Tab</span>
               </div>
             </div>
-            <span className="text-slate-400">Total Capacity: 48 Seats</span>
+            <span className="text-[#6B7280] dark:text-[#9CA3AF] font-mono">Total Club Dining Capacity: 48 Seats</span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -335,38 +332,38 @@ export default function BarManagementPage({
                     setSelectedTab(activeTab);
                     setActiveView("POS");
                   }}
-                  className={`p-5 rounded-2xl border cursor-pointer transition-all shadow-xs hover:shadow-md flex flex-col justify-between h-40 ${
+                  className={`p-5 rounded-lg border cursor-pointer transition-all shadow-xs hover:border-[#C5A059] flex flex-col justify-between h-40 ${
                     isOccupied
-                      ? "bg-amber-50/60 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800"
-                      : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-emerald-500"
+                      ? "bg-[#FAF8F5]/80 dark:bg-[#121A28]/80 border-[#C5A059]/60"
+                      : "bg-white dark:bg-[#0E1522] border-[#E5DFD5] dark:border-[#222D3E]"
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-extrabold text-base text-slate-900 dark:text-white">
+                    <span className="font-serif font-bold text-base text-[#0B1320] dark:text-white">
                       Table {tbl.tableNumber}
                     </span>
                     <span
                       className={`w-2.5 h-2.5 rounded-full ${
-                        isOccupied ? "bg-amber-500" : "bg-emerald-500"
+                        isOccupied ? "bg-[#921111]" : "bg-[#C5A059]"
                       }`}
                     />
                   </div>
 
-                  <div className="text-xs text-slate-500">
-                    <div>{tbl.name}</div>
-                    <span className="text-[10px] text-slate-400">Capacity: {tbl.capacity} Persons</span>
+                  <div className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
+                    <div className="font-serif text-[#0B1320] dark:text-white">{tbl.name}</div>
+                    <span className="text-[10px] text-[#8C6D23] dark:text-[#DFCA9B] uppercase font-bold tracking-wider">Capacity: {tbl.capacity} Persons</span>
                   </div>
 
-                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+                  <div className="pt-2 border-t border-[#E5DFD5] dark:border-[#222D3E] flex items-center justify-between text-xs">
                     {isOccupied ? (
                       <>
-                        <span className="font-bold text-amber-700 dark:text-amber-400">
+                        <span className="font-mono font-bold text-[#921111] dark:text-[#DFCA9B]">
                           {formatINR(activeTab?.finalAmountPaise || 0)}
                         </span>
-                        <span className="text-[10px] text-amber-600">Active Tab →</span>
+                        <span className="text-[10px] text-[#8C6D23] dark:text-[#DFCA9B] uppercase tracking-wider font-bold">Active Tab →</span>
                       </>
                     ) : (
-                      <span className="text-emerald-600 font-bold text-[11px]">+ Tap to Order</span>
+                      <span className="text-[#8C6D23] dark:text-[#DFCA9B] font-bold text-[11px] uppercase tracking-wider">+ Order</span>
                     )}
                   </div>
                 </div>
@@ -382,13 +379,13 @@ export default function BarManagementPage({
           {/* MENU ITEMS SHELF */}
           <div className="lg:col-span-2 space-y-4">
             {/* Category pills */}
-            <div className="flex overflow-x-auto bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs">
+            <div className="flex overflow-x-auto bg-[#FAF8F5] dark:bg-[#121A28] p-1 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] text-xs">
               {["ALL", "HOT_BEVERAGES", "COLD_BEVERAGES", "HEALTH_SHAKES", "SNACKS", "MEALS", "DESSERTS"].map((c) => (
                 <button
                   key={c}
                   onClick={() => setSelectedCategory(c)}
-                  className={`px-3 py-1.5 rounded-lg font-bold text-[11px] whitespace-nowrap ${
-                    selectedCategory === c ? "bg-white dark:bg-slate-700 text-orange-600 shadow-xs" : "text-slate-500"
+                  className={`px-3 py-1.5 rounded-md font-bold text-[11px] uppercase tracking-wider whitespace-nowrap transition-all ${
+                    selectedCategory === c ? "bg-[#921111] text-white shadow-xs" : "text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#0B1320]"
                   }`}
                 >
                   {c.replace("_", " ")}
@@ -402,39 +399,39 @@ export default function BarManagementPage({
                 <button
                   key={item.id}
                   onClick={() => addToCart(item)}
-                  className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-orange-500 text-left transition-all shadow-xs flex flex-col justify-between h-28 active:scale-98"
+                  className="p-4 rounded-lg bg-white dark:bg-[#0E1522] border border-[#E5DFD5] dark:border-[#222D3E] hover:border-[#C5A059] text-left transition-all shadow-xs flex flex-col justify-between h-28 active:scale-98"
                 >
                   <div>
-                    <span className="font-bold text-xs text-slate-900 dark:text-white line-clamp-2">{item.name}</span>
-                    <span className="text-[10px] text-slate-400 block mt-0.5">{item.category}</span>
+                    <span className="font-serif font-bold text-xs text-[#0B1320] dark:text-white line-clamp-2">{item.name}</span>
+                    <span className="text-[9px] font-mono text-[#8C6D23] dark:text-[#DFCA9B] uppercase tracking-wider block mt-0.5">{item.category}</span>
                   </div>
-                  <span className="font-extrabold text-xs text-orange-600">{formatINR(item.pricePaise)}</span>
+                  <span className="font-serif font-bold text-xs text-[#921111] dark:text-[#DFCA9B]">{formatINR(item.pricePaise)}</span>
                 </button>
               ))}
             </div>
           </div>
 
           {/* POS TAB CART & KITCHEN DISPATCH */}
-          <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 sticky top-20">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+          <div className="p-6 rounded-lg bg-white dark:bg-[#0E1522] border border-[#E5DFD5] dark:border-[#222D3E] shadow-sm space-y-4 sticky top-20">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E5DFD5] dark:border-[#222D3E]">
               <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                <h3 className="font-serif text-base font-bold text-[#0B1320] dark:text-white">
                   {selectedTable ? `Table ${selectedTable.tableNumber}` : "Bar Counter"}
                 </h3>
-                <span className="text-[11px] text-slate-400">Add to Running Tab & Route to KDS</span>
+                <span className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">Route to Kitchen & Add to Tab</span>
               </div>
-              <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-orange-100 text-orange-800">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[#C5A059]/15 text-[#8C6D23] dark:text-[#DFCA9B] border border-[#C5A059]/30">
                 {posCart.length} ITEMS
               </span>
             </div>
 
             {/* Member selector for tier discount */}
             <div>
-              <label className="font-semibold block mb-1 text-xs">Linked Member (For Discount)</label>
+              <label className="text-[10px] uppercase font-bold text-[#8C6D23] dark:text-[#DFCA9B] tracking-wider block mb-1">Linked Member (For Tier Privilege)</label>
               <select
                 value={selectedMemberId}
                 onChange={(e) => setSelectedMemberId(e.target.value)}
-                className="w-full p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-xs font-semibold"
+                className="w-full p-2 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] text-xs font-serif font-bold text-[#0B1320] dark:text-white"
               >
                 <option value="">Walk-in Guest (0% Discount)</option>
                 {members.map((m) => {
@@ -450,29 +447,29 @@ export default function BarManagementPage({
             </div>
 
             {/* Cart Line Items */}
-            <div className="max-h-48 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 py-1 space-y-1.5 text-xs">
+            <div className="max-h-48 overflow-y-auto divide-y divide-[#E5DFD5] dark:divide-[#222D3E] py-1 space-y-1.5 text-xs">
               {posCart.length === 0 ? (
-                <p className="text-slate-400 py-6 text-center">Tap any food/beverage on the left to add.</p>
+                <p className="text-[#6B7280] dark:text-[#9CA3AF] py-6 text-center">Select any food or beverage item on the left to add.</p>
               ) : (
                 posCart.map((c) => (
                   <div key={c.menuItemId} className="pt-1.5 flex items-center justify-between">
                     <div>
-                      <div className="font-bold text-slate-800 dark:text-slate-200">{c.name}</div>
-                      <span className="text-[10px] text-slate-400">{formatINR(c.unitPricePaise)}</span>
+                      <div className="font-serif font-bold text-[#0B1320] dark:text-white">{c.name}</div>
+                      <span className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF]">{formatINR(c.unitPricePaise)}</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => updateCartQty(c.menuItemId, c.quantity - 1)}
-                        className="p-1 rounded bg-slate-100 dark:bg-slate-800"
+                        className="p-1 rounded bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E]"
                       >
-                        <Minus className="w-3 h-3" />
+                        <Minus className="w-3 h-3 text-[#0B1320] dark:text-white" />
                       </button>
-                      <span className="font-mono font-bold w-4 text-center">{c.quantity}</span>
+                      <span className="font-mono font-bold w-4 text-center text-[#0B1320] dark:text-white">{c.quantity}</span>
                       <button
                         onClick={() => updateCartQty(c.menuItemId, c.quantity + 1)}
-                        className="p-1 rounded bg-slate-100 dark:bg-slate-800"
+                        className="p-1 rounded bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E]"
                       >
-                        <Plus className="w-3 h-3" />
+                        <Plus className="w-3 h-3 text-[#0B1320] dark:text-white" />
                       </button>
                     </div>
                   </div>
@@ -481,22 +478,22 @@ export default function BarManagementPage({
             </div>
 
             <div>
-              <label className="font-semibold block mb-1 text-xs">Kitchen Notes / Priority</label>
+              <label className="text-[10px] uppercase font-bold text-[#8C6D23] dark:text-[#DFCA9B] tracking-wider block mb-1">Kitchen Instructions / Priority</label>
               <input
                 type="text"
                 value={orderNotes}
                 onChange={(e) => setOrderNotes(e.target.value)}
-                placeholder="e.g. Less spicy, rush table"
-                className="w-full p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-xs"
+                placeholder="e.g. Less spicy, priority rush"
+                className="w-full p-2 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] text-xs text-[#0B1320] dark:text-white"
               />
             </div>
 
             <button
               onClick={handleSendToKitchen}
               disabled={posCart.length === 0}
-              className="w-full py-3 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs shadow-md shadow-orange-600/20 active:scale-95 transition-all disabled:opacity-50"
+              className="w-full py-3 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-widest shadow-sm active:scale-98 transition-all disabled:opacity-50"
             >
-              Send to Kitchen Display (KDS) & Add to Tab
+              Route to Kitchen Display (KDS) & Add to Tab
             </button>
           </div>
         </div>
@@ -505,10 +502,10 @@ export default function BarManagementPage({
       {/* 3. LIVE KITCHEN DISPLAY SYSTEM (KDS) */}
       {activeView === "KDS" && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">Live Kitchen Order Tickets</h3>
-            <span className="text-xs font-mono text-emerald-600 font-bold animate-pulse">
-              ● Live Auto-Syncing
+          <div className="flex items-center justify-between pb-3 border-b border-[#E5DFD5] dark:border-[#222D3E]">
+            <h3 className="font-serif text-base font-bold text-[#0B1320] dark:text-white">Live Kitchen Display System (KDS)</h3>
+            <span className="text-[10px] font-mono text-[#8C6D23] dark:text-[#DFCA9B] font-bold uppercase tracking-wider animate-pulse">
+              ● Live Kitchen Dispatch
             </span>
           </div>
 
@@ -516,37 +513,37 @@ export default function BarManagementPage({
             {kdsOrders.map((ord) => (
               <div
                 key={ord.id}
-                className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between text-xs space-y-4"
+                className="p-5 rounded-lg bg-white dark:bg-[#0E1522] border border-[#E5DFD5] dark:border-[#222D3E] shadow-sm flex flex-col justify-between text-xs space-y-4"
               >
                 <div>
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-                    <span className="font-mono font-bold text-orange-600">#{ord.orderNumber}</span>
+                  <div className="flex items-center justify-between pb-2 border-b border-[#E5DFD5] dark:border-[#222D3E]">
+                    <span className="font-mono font-bold text-[#921111] dark:text-[#DFCA9B]">#{ord.orderNumber}</span>
                     <span
-                      className={`px-2 py-0.5 rounded font-bold uppercase text-[10px] ${
+                      className={`px-2 py-0.5 rounded font-mono font-bold uppercase text-[9px] tracking-wider ${
                         ord.status === "NEW"
-                          ? "bg-red-100 text-red-800 animate-pulse"
+                          ? "bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300 border border-red-200"
                           : ord.status === "PREPARING"
-                          ? "bg-amber-100 text-amber-800"
-                          : "bg-emerald-100 text-emerald-800"
+                          ? "bg-[#C5A059]/15 text-[#8C6D23] dark:text-[#DFCA9B] border border-[#C5A059]/30"
+                          : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200"
                       }`}
                     >
                       {ord.status}
                     </span>
                   </div>
 
-                  <div className="mt-2 font-bold text-sm text-slate-900 dark:text-white">
+                  <div className="mt-2 font-serif font-bold text-sm text-[#0B1320] dark:text-white">
                     {ord.table ? `Table ${ord.table.tableNumber}` : "Bar Counter"}
                   </div>
                   {ord.notes && (
-                    <div className="text-[11px] text-amber-600 bg-amber-50 dark:bg-amber-950/40 p-1.5 rounded mt-1">
+                    <div className="text-[11px] text-[#8C6D23] bg-[#FAF8F5] dark:bg-[#121A28] p-1.5 rounded mt-1 border border-[#E5DFD5] dark:border-[#222D3E]">
                       Note: {ord.notes}
                     </div>
                   )}
 
-                  <div className="mt-3 space-y-1.5 divide-y divide-slate-100 dark:divide-slate-800">
+                  <div className="mt-3 space-y-1.5 divide-y divide-[#E5DFD5] dark:divide-[#222D3E]">
                     {ord.items?.map((it: any) => (
                       <div key={it.id} className="pt-1 flex items-center justify-between">
-                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                        <span className="font-serif font-bold text-[#0B1320] dark:text-white">
                           {it.quantity}x {it.menuItem?.name}
                         </span>
                       </div>
@@ -555,27 +552,27 @@ export default function BarManagementPage({
                 </div>
 
                 {/* Status action buttons */}
-                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex gap-2">
+                <div className="pt-3 border-t border-[#E5DFD5] dark:border-[#222D3E] flex gap-2">
                   {ord.status === "NEW" && (
                     <button
                       onClick={() => handleUpdateKdsStatus(ord.id, "PREPARING")}
-                      className="w-full py-2 rounded-lg bg-amber-500 text-slate-950 font-bold"
+                      className="w-full py-2 rounded-md bg-[#C5A059] hover:bg-[#A8843D] text-white font-bold text-xs uppercase tracking-wider transition-colors"
                     >
-                      Start Preparing
+                      Start Preparation
                     </button>
                   )}
                   {ord.status === "PREPARING" && (
                     <button
                       onClick={() => handleUpdateKdsStatus(ord.id, "READY")}
-                      className="w-full py-2 rounded-lg bg-emerald-600 text-white font-bold"
+                      className="w-full py-2 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider transition-colors"
                     >
-                      Mark Ready for Server
+                      Ready for Server
                     </button>
                   )}
                   {ord.status === "READY" && (
                     <button
                       onClick={() => handleUpdateKdsStatus(ord.id, "SERVED")}
-                      className="w-full py-2 rounded-lg bg-slate-700 text-white font-bold"
+                      className="w-full py-2 rounded-md bg-[#0B1320] dark:bg-white text-white dark:text-[#0B1320] font-bold text-xs uppercase tracking-wider transition-colors"
                     >
                       Mark as Served
                     </button>
@@ -589,52 +586,57 @@ export default function BarManagementPage({
 
       {/* 4. OPEN TABS LEDGER */}
       {activeView === "TABS" && (
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">Active Member Running Tabs</h3>
-            <span className="text-xs text-slate-400">Total Open Tabs: {openTabs.length}</span>
+        <div className="p-6 rounded-lg bg-white dark:bg-[#0E1522] border border-[#E5DFD5] dark:border-[#222D3E] shadow-sm space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-[#E5DFD5] dark:border-[#222D3E]">
+            <div>
+              <h3 className="font-serif text-base font-bold text-[#0B1320] dark:text-white">Active Member Running Tabs</h3>
+              <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Clubhouse F&B charges awaiting final settlement</p>
+            </div>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#C5A059]/15 text-[#8C6D23] dark:text-[#DFCA9B] border border-[#C5A059]/30 font-bold uppercase tracking-wider">
+              {openTabs.length} OPEN TABS
+            </span>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto border border-[#E5DFD5] dark:border-[#222D3E] rounded-lg">
             <table className="w-full text-xs text-left">
-              <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-500 font-semibold border-b">
+              <thead className="bg-[#FAF8F5] dark:bg-[#121A28] text-[#8C6D23] dark:text-[#DFCA9B] font-bold text-[10px] uppercase tracking-wider border-b border-[#E5DFD5] dark:border-[#222D3E]">
                 <tr>
                   <th className="p-3">Tab #</th>
                   <th className="p-3">Table / Guest</th>
                   <th className="p-3">Member / Tier</th>
                   <th className="p-3">Opened At</th>
                   <th className="p-3">Total (₹)</th>
-                  <th className="p-3">Discount (₹)</th>
+                  <th className="p-3">Privilege (₹)</th>
                   <th className="p-3">Final Due (₹)</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+              <tbody className="divide-y divide-[#E5DFD5] dark:divide-[#222D3E] font-medium">
                 {openTabs.map((tab) => (
-                  <tr key={tab.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                    <td className="p-3 font-mono font-bold text-orange-600">{tab.tabNumber}</td>
-                    <td className="p-3 font-bold">{tab.table ? `Table ${tab.table.tableNumber}` : tab.guestName}</td>
+                  <tr key={tab.id} className="hover:bg-[#FAF8F5]/50 dark:hover:bg-[#121A28]/50">
+                    <td className="p-3 font-mono font-bold text-[#921111] dark:text-[#DFCA9B]">{tab.tabNumber}</td>
+                    <td className="p-3 font-serif font-bold text-[#0B1320] dark:text-white">{tab.table ? `Table ${tab.table.tableNumber}` : tab.guestName}</td>
                     <td className="p-3">
                       {tab.member ? (
-                        <span className="font-bold text-emerald-600">
+                        <span className="font-serif font-bold text-[#0B1320] dark:text-white">
                           {tab.member.name} ({tab.member.memberships?.[0]?.tier || 'MEMBER'})
                         </span>
                       ) : (
-                        <span className="text-slate-400">Walk-in</span>
+                        <span className="text-[#6B7280]">Walk-in</span>
                       )}
                     </td>
-                    <td className="p-3 text-slate-500">{formatDateTime(tab.openedAt)}</td>
-                    <td className="p-3 text-slate-500">{formatINR(tab.totalAmountPaise)}</td>
-                    <td className="p-3 text-emerald-600">-{formatINR(tab.discountAmountPaise)}</td>
-                    <td className="p-3 font-black text-slate-900 dark:text-white text-sm">
+                    <td className="p-3 text-[#6B7280] dark:text-[#9CA3AF]">{formatDateTime(tab.openedAt)}</td>
+                    <td className="p-3 text-[#6B7280] dark:text-[#9CA3AF] font-mono">{formatINR(tab.totalAmountPaise)}</td>
+                    <td className="p-3 text-[#8C6D23] dark:text-[#DFCA9B] font-mono">-{formatINR(tab.discountAmountPaise)}</td>
+                    <td className="p-3 font-bold font-mono text-[#921111] dark:text-[#DFCA9B] text-sm">
                       {formatINR(tab.finalAmountPaise)}
                     </td>
                     <td className="p-3 text-right">
                       <button
                         onClick={() => handleOpenSettleModal(tab)}
-                        className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs"
+                        className="px-3.5 py-1.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider shadow-sm transition-colors"
                       >
-                        Settle Bill →
+                        Settle Tab →
                       </button>
                     </td>
                   </tr>
@@ -647,43 +649,43 @@ export default function BarManagementPage({
 
       {/* 5. END OF DAY CLOSING REPORT */}
       {activeView === "EOD" && eodReport && (
-        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
-          <div className="flex items-center justify-between pb-4 border-b">
+        <div className="p-6 rounded-lg bg-white dark:bg-[#0E1522] border border-[#E5DFD5] dark:border-[#222D3E] shadow-sm space-y-6">
+          <div className="flex items-center justify-between pb-4 border-b border-[#E5DFD5] dark:border-[#222D3E]">
             <div>
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white">End-of-Day Bar & Lounge Closing Summary</h3>
-              <p className="text-xs text-slate-500">Date: {formatDateTime(eodReport.date)}</p>
+              <h3 className="font-serif text-lg font-bold text-[#0B1320] dark:text-white">End-of-Day Clubhouse Dining & Lounge Closing Summary</h3>
+              <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Date: {formatDateTime(eodReport.date)}</p>
             </div>
             <button
               onClick={() => window.print()}
-              className="px-3 py-1.5 rounded-lg border text-xs font-bold flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800"
+              className="px-3.5 py-1.5 rounded-md border border-[#C5A059] text-[#0B1320] dark:text-[#DFCA9B] hover:bg-[#C5A059]/10 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors"
             >
-              <Printer className="w-4 h-4" />
+              <Printer className="w-4 h-4 text-[#8C6D23]" />
               Print Closing Report
             </button>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs">
-              <span className="text-slate-400 block uppercase">Total Revenue</span>
-              <span className="text-xl font-black text-orange-600 mt-1 block">
+            <div className="p-4 rounded-md bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] text-xs">
+              <span className="text-[#8C6D23] dark:text-[#DFCA9B] uppercase font-bold tracking-wider block">Total Revenue</span>
+              <span className="text-xl font-serif font-bold text-[#0B1320] dark:text-white mt-1 block">
                 {formatINR(eodReport.totalRevenuePaise)}
               </span>
             </div>
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs">
-              <span className="text-slate-400 block uppercase">Orders Count</span>
-              <span className="text-xl font-black text-slate-900 dark:text-white mt-1 block">
+            <div className="p-4 rounded-md bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] text-xs">
+              <span className="text-[#8C6D23] dark:text-[#DFCA9B] uppercase font-bold tracking-wider block">Orders Count</span>
+              <span className="text-xl font-serif font-bold text-[#0B1320] dark:text-white mt-1 block">
                 {eodReport.ordersCount}
               </span>
             </div>
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs">
-              <span className="text-slate-400 block uppercase">Average Ticket</span>
-              <span className="text-xl font-black text-slate-900 dark:text-white mt-1 block">
+            <div className="p-4 rounded-md bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] text-xs">
+              <span className="text-[#8C6D23] dark:text-[#DFCA9B] uppercase font-bold tracking-wider block">Average Ticket</span>
+              <span className="text-xl font-serif font-bold text-[#0B1320] dark:text-white mt-1 block">
                 {formatINR(eodReport.averageTicketPaise)}
               </span>
             </div>
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs">
-              <span className="text-slate-400 block uppercase">Unsettled Tabs</span>
-              <span className="text-xl font-black text-amber-600 mt-1 block">
+            <div className="p-4 rounded-md bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] text-xs">
+              <span className="text-[#8C6D23] dark:text-[#DFCA9B] uppercase font-bold tracking-wider block">Unsettled Tabs</span>
+              <span className="text-xl font-serif font-bold text-[#921111] dark:text-[#DFCA9B] mt-1 block">
                 {eodReport.openTabsCount} ({formatINR(eodReport.openTabsAmountPaise)})
               </span>
             </div>
@@ -693,56 +695,56 @@ export default function BarManagementPage({
 
       {/* SETTLE BILL MODAL */}
       {showSettleModal && tabToSettle && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative text-xs space-y-4">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">
+        <div className="fixed inset-0 bg-[#0B1320]/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0E1522] border border-[#C5A059]/40 rounded-xl max-w-md w-full p-6 shadow-2xl relative text-xs space-y-4">
+            <h3 className="font-serif text-base font-bold text-[#0B1320] dark:text-white">
               Settle Tab #{tabToSettle.tabNumber}
             </h3>
 
-            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800 space-y-1">
-              <div className="flex justify-between">
-                <span>Subtotal:</span>
-                <span>{formatINR(tabToSettle.totalAmountPaise)}</span>
+            <div className="p-4 rounded-md bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] space-y-1.5">
+              <div className="flex justify-between text-[#6B7280] dark:text-[#9CA3AF]">
+                <span>Items Subtotal:</span>
+                <span className="font-mono">{formatINR(tabToSettle.totalAmountPaise)}</span>
               </div>
-              <div className="flex justify-between text-emerald-600">
-                <span>Member Tier Discount:</span>
-                <span>-{formatINR(tabToSettle.discountAmountPaise)}</span>
+              <div className="flex justify-between text-[#8C6D23] dark:text-[#DFCA9B] font-semibold">
+                <span>Member Tier Privilege:</span>
+                <span className="font-mono">-{formatINR(tabToSettle.discountAmountPaise)}</span>
               </div>
-              <div className="flex justify-between font-extrabold text-sm pt-2 border-t">
-                <span>Net Total Due:</span>
-                <span className="text-orange-600">{formatINR(tabToSettle.finalAmountPaise)}</span>
+              <div className="flex justify-between font-serif font-bold text-sm pt-2 border-t border-[#E5DFD5] dark:border-[#222D3E]">
+                <span className="text-[#0B1320] dark:text-white">Net Due:</span>
+                <span className="text-[#921111] dark:text-[#DFCA9B] font-mono">{formatINR(tabToSettle.finalAmountPaise)}</span>
               </div>
             </div>
 
             {/* Split Payment Inputs */}
             <div className="space-y-2">
-              <label className="font-bold block">Split Payment Distribution (₹)</label>
+              <label className="text-[10px] uppercase font-bold text-[#8C6D23] dark:text-[#DFCA9B] tracking-wider block">Split Payment Settlement (₹)</label>
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <span className="text-[10px] text-slate-400 block">Cash (₹)</span>
+                  <span className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] block font-bold">Cash (₹)</span>
                   <input
                     type="number"
                     value={cashAmount}
                     onChange={(e) => setCashAmount(Number(e.target.value))}
-                    className="w-full p-2 rounded-lg border bg-slate-50 dark:bg-slate-800 font-bold"
+                    className="w-full p-2 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] font-bold text-[#0B1320] dark:text-white"
                   />
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 block">UPI QR (₹)</span>
+                  <span className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] block font-bold">UPI QR (₹)</span>
                   <input
                     type="number"
                     value={upiAmount}
                     onChange={(e) => setUpiAmount(Number(e.target.value))}
-                    className="w-full p-2 rounded-lg border bg-slate-50 dark:bg-slate-800 font-bold"
+                    className="w-full p-2 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] font-bold text-[#0B1320] dark:text-white"
                   />
                 </div>
                 <div>
-                  <span className="text-[10px] text-slate-400 block">Card (₹)</span>
+                  <span className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] block font-bold">Card (₹)</span>
                   <input
                     type="number"
                     value={cardAmount}
                     onChange={(e) => setCardAmount(Number(e.target.value))}
-                    className="w-full p-2 rounded-lg border bg-slate-50 dark:bg-slate-800 font-bold"
+                    className="w-full p-2 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] font-bold text-[#0B1320] dark:text-white"
                   />
                 </div>
               </div>
@@ -750,12 +752,12 @@ export default function BarManagementPage({
 
             {/* UPI Dynamic QR Preview */}
             {upiAmount > 0 && (
-              <div className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-center space-y-1">
-                <span className="text-[10px] text-slate-500 font-semibold block">
-                  Scan to Pay ₹{upiAmount} via PhonePe / GPay / Paytm
+              <div className="p-3 rounded-md bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] text-center space-y-1">
+                <span className="text-[10px] text-[#8C6D23] dark:text-[#DFCA9B] font-bold uppercase tracking-wider block">
+                  Scan to Pay ₹{upiAmount} via Club Gateway
                 </span>
-                <div className="w-24 h-24 bg-white mx-auto rounded-lg flex items-center justify-center p-2 border">
-                  <QrCode className="w-20 h-20 text-slate-900" />
+                <div className="w-24 h-24 bg-white mx-auto rounded-md flex items-center justify-center p-2 border border-[#C5A059]/40">
+                  <QrCode className="w-20 h-20 text-[#0B1320]" />
                 </div>
               </div>
             )}
@@ -764,14 +766,14 @@ export default function BarManagementPage({
               <button
                 type="button"
                 onClick={() => setShowSettleModal(false)}
-                className="flex-1 py-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 font-semibold"
+                className="flex-1 py-2.5 rounded-md bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] text-[#4B5563] dark:text-[#9CA3AF] font-bold text-xs uppercase tracking-wider transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleExecuteSettlement}
-                className="flex-1 py-2.5 rounded-lg bg-emerald-600 text-white font-bold"
+                className="flex-1 py-2.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider shadow-sm transition-all"
               >
                 Confirm Settlement
               </button>

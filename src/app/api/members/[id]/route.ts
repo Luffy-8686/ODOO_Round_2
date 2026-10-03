@@ -61,40 +61,6 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       return NextResponse.json({ error: "Member not found" }, { status: 404 });
     }
 
-    // Automated 5-Day Membership Expiry Check & Notification
-    const activeMembership = member.memberships?.find((m: any) => m.status === "ACTIVE") || member.memberships?.[0];
-    if (activeMembership && activeMembership.endDate && activeMembership.tier !== "FREE") {
-      const now = new Date();
-      const msLeft = new Date(activeMembership.endDate).getTime() - now.getTime();
-      const daysLeft = Math.ceil(msLeft / (1000 * 60 * 60 * 24));
-
-      if (daysLeft <= 5 && daysLeft >= 0 && member.userId) {
-        const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-        const existingAlert = await prisma.notification.findFirst({
-          where: {
-            userId: member.userId,
-            title: { contains: "Expiring Soon" },
-            createdAt: { gte: oneDayAgo },
-          },
-        });
-
-        if (!existingAlert) {
-          try {
-            await prisma.notification.create({
-              data: {
-                userId: member.userId,
-                title: `⚠️ Membership Expiring Soon (${daysLeft === 0 ? "Today" : daysLeft + " Days Left"})`,
-                message: `Your ${activeMembership.plan?.name || activeMembership.tier} expires on ${new Date(activeMembership.endDate).toLocaleDateString("en-IN")}. Renew or upgrade your plan to maintain uninterrupted court privileges and discounts.`,
-                type: "WARNING",
-              },
-            });
-          } catch {
-            // ignore
-          }
-        }
-      }
-    }
-
     return NextResponse.json({ member });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
