@@ -297,4 +297,58 @@ describe("Sports Club Management Engine — Comprehensive Business Rule Suite", 
       expect(typeof res.expiryAlertsSent).toBe("number");
     });
   });
+
+  // TEST 8: Past Slot & Advance Booking Window Guard
+  describe("8. Past Slot Guard & Membership Advance Booking Window", () => {
+    it("Rejects any booking attempt in the past", async () => {
+      const pastDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); // 2 days ago
+
+      await expect(
+        createCourtBookingAtomic({
+          courtId: court.id,
+          bookerName: "Past Booker",
+          bookerPhone: "+91 99999 00000",
+          bookerEmail: "past@test.com",
+          startTime: pastDate,
+          durationMinutes: 60,
+        })
+      ).rejects.toThrow(/Cannot book court slots in the past/);
+    });
+
+    it("Rejects member portal booking beyond plan's advanceBookingDays limit (14 days for Gold)", async () => {
+      const farFutureDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days ahead
+
+      await expect(
+        createCourtBookingAtomic({
+          courtId: court.id,
+          memberId: goldMember.id,
+          bookerName: goldMember.name,
+          bookerPhone: goldMember.phone,
+          bookerEmail: "goldfar@test.com",
+          startTime: farFutureDate,
+          durationMinutes: 60,
+          source: "MEMBER_PORTAL",
+        })
+      ).rejects.toThrow(/Advance booking window exceeded/);
+    });
+
+    it("Allows member portal booking within the allowed advanceBookingDays window (e.g., 5 days ahead)", async () => {
+      const validFutureDate = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+      validFutureDate.setHours(11, 0, 0, 0);
+
+      const booking = await createCourtBookingAtomic({
+        courtId: court.id,
+        memberId: goldMember.id,
+        bookerName: goldMember.name,
+        bookerPhone: goldMember.phone,
+        bookerEmail: "goldvalid@test.com",
+        startTime: validFutureDate,
+        durationMinutes: 60,
+        source: "MEMBER_PORTAL",
+      });
+
+      expect(booking.id).toBeDefined();
+      expect(booking.status).toBe("CONFIRMED");
+    });
+  });
 });

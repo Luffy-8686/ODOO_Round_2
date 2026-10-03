@@ -149,12 +149,34 @@ export default function MemberPortalPage({
     }
   }, [initialTab]);
 
+  const membership = member?.memberships?.[0];
+  const plan = membership?.plan;
+  const isGold = plan?.tier === "GOLD";
+  const advanceDays = plan?.advanceBookingDays ?? (isGold ? 14 : plan?.tier === "SILVER" ? 7 : plan?.tier === "JUNIOR" ? 7 : 7);
+
+  const todayStr = new Date().toISOString().split("T")[0];
+  const maxAllowedDate = new Date();
+  maxAllowedDate.setDate(maxAllowedDate.getDate() + advanceDays);
+  const maxAllowedDateStr = maxAllowedDate.toISOString().split("T")[0];
+
   const handlePortalBooking = async (court: any, time: string) => {
     setBookingError(null);
     setBookingSuccess(null);
-    setIsBookingSubmitting(true);
 
+    const now = new Date();
     const slotStart = new Date(`${bookingDate}T${time}:00`);
+
+    if (slotStart.getTime() < now.getTime() - 5 * 60 * 1000) {
+      setBookingError("Cannot book court slots in the past.");
+      return;
+    }
+
+    if (bookingDate > maxAllowedDateStr) {
+      setBookingError(`Your ${plan?.tier || "current"} membership plan allows booking up to ${advanceDays} days in advance (${maxAllowedDateStr}).`);
+      return;
+    }
+
+    setIsBookingSubmitting(true);
 
     try {
       const res = await fetch("/api/bookings", {
@@ -228,8 +250,9 @@ export default function MemberPortalPage({
   };
 
   const isSlotPast = (timeStr: string) => {
-    const todayStr = new Date().toISOString().split("T")[0];
-    if (bookingDate !== todayStr) return false;
+    const today = new Date().toISOString().split("T")[0];
+    if (bookingDate < today) return true;
+    if (bookingDate > today) return false;
     const [h, m] = timeStr.split(":").map(Number);
     const now = new Date();
     const slotDate = new Date();
@@ -274,9 +297,6 @@ export default function MemberPortalPage({
     });
   };
 
-  const membership = member?.memberships?.[0];
-  const plan = membership?.plan;
-  const isGold = plan?.tier === "GOLD";
   const barDiscountPercent = plan?.barDiscountPercent || (isGold ? 20 : 10);
 
   // Calculate cart pricing
@@ -880,16 +900,40 @@ export default function MemberPortalPage({
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
 
-              <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-                <span className="text-[11px] font-bold text-slate-500 pl-2">Date:</span>
+              <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl">
+                <span className="text-[11px] font-bold text-slate-500 pl-1">Date:</span>
                 <input
                   type="date"
+                  min={todayStr}
+                  max={maxAllowedDateStr}
                   value={bookingDate}
-                  onChange={(e) => setBookingDate(e.target.value)}
-                  className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val < todayStr) {
+                      setBookingDate(todayStr);
+                    } else if (val > maxAllowedDateStr) {
+                      setBookingDate(maxAllowedDateStr);
+                    } else {
+                      setBookingDate(val);
+                    }
+                  }}
+                  className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold cursor-pointer"
                 />
               </div>
             </div>
+          </div>
+
+          {/* Booking Window Info Badge */}
+          <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-900/60 text-xs text-blue-900 dark:text-blue-200">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+              <span>
+                <strong>{plan?.tier || "Gold"} Booking Window:</strong> Valid for bookings from <strong>Today ({formatDate(new Date())})</strong> up to <strong>{formatDate(maxAllowedDate)}</strong> ({advanceDays} days advance window).
+              </span>
+            </div>
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-blue-200/60 dark:bg-blue-900/60 text-blue-950 dark:text-blue-100">
+              {advanceDays}-DAY LIMIT
+            </span>
           </div>
 
           {/* Time & Sport Filter Bars */}
