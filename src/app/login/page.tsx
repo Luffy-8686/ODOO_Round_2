@@ -28,7 +28,7 @@ const DEMO_PERSONAS = [
     email: "owner@championsclub.in",
     title: "Club Owner & Executive",
     badgeColor: "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950 dark:text-purple-300",
-    icon: "👑",
+   
   },
   {
     role: "MANAGER" as Role,
@@ -36,7 +36,7 @@ const DEMO_PERSONAS = [
     email: "manager@championsclub.in",
     title: "Operations Manager",
     badgeColor: "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-950 dark:text-blue-300",
-    icon: "📋",
+  
   },
   {
     role: "FRONT_DESK" as Role,
@@ -44,7 +44,7 @@ const DEMO_PERSONAS = [
     email: "frontdesk@championsclub.in",
     title: "Front Desk Officer",
     badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300",
-    icon: "🎟️",
+   
   },
   {
     role: "BAR_STAFF" as Role,
@@ -52,7 +52,7 @@ const DEMO_PERSONAS = [
     email: "bar@championsclub.in",
     title: "Bar & F&B Staff",
     badgeColor: "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950 dark:text-rose-300",
-    icon: "☕",
+  
   },
   {
     role: "SHOP_STAFF" as Role,
@@ -60,7 +60,7 @@ const DEMO_PERSONAS = [
     email: "shop@championsclub.in",
     title: "Pro Shop Staff",
     badgeColor: "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300",
-    icon: "🛍️",
+  
   },
   {
     role: "COACH" as Role,
@@ -68,7 +68,7 @@ const DEMO_PERSONAS = [
     email: "coach@championsclub.in",
     title: "Head Tennis Coach",
     badgeColor: "bg-cyan-100 text-cyan-800 border-cyan-300 dark:bg-cyan-950 dark:text-cyan-300",
-    icon: "🎾",
+   
   },
   {
     role: "MEMBER" as Role,
@@ -76,7 +76,7 @@ const DEMO_PERSONAS = [
     email: "arjun.gold@gmail.com",
     title: "Gold Tier Member (VIP)",
     badgeColor: "bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-950 dark:text-yellow-300",
-    icon: "🥇",
+    
   },
   {
     role: "MEMBER" as Role,
@@ -84,7 +84,7 @@ const DEMO_PERSONAS = [
     email: "priya.silver@gmail.com",
     title: "Silver Tier Member",
     badgeColor: "bg-slate-200 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-200",
-    icon: "🥈",
+  
   },
   {
     role: "MEMBER" as Role,
@@ -92,31 +92,31 @@ const DEMO_PERSONAS = [
     email: "rohan.junior@gmail.com",
     title: "Junior Tier Member (Under 18)",
     badgeColor: "bg-teal-100 text-teal-800 border-teal-300 dark:bg-teal-950 dark:text-teal-300",
-    icon: "🧒",
+  
   },
   {
     role: "MEMBER" as Role,
     name: "Kabir Mehta",
     email: "kabir.expiring@gmail.com",
-    title: "Gold Tier (Expires in 3 Days ⚠️)",
+    title: "Gold Tier (Expires in 3 Days)",
     badgeColor: "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300",
-    icon: "⚠️",
+  
   },
   {
     role: "MEMBER" as Role,
     name: "Tara Sharma",
     email: "tara.expiring@gmail.com",
-    title: "Silver Tier (Expires Tomorrow ⏳)",
+    title: "Silver Tier (Expires Tomorrow)",
     badgeColor: "bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-950 dark:text-orange-300",
-    icon: "⏳",
+   
   },
   {
     role: "MEMBER" as Role,
     name: "Sneha Rao",
     email: "sneha.silver@gmail.com",
-    title: "Silver Tier (Expired Member 🚨)",
+    title: "Silver Tier (Expired Member)",
     badgeColor: "bg-red-100 text-red-800 border-red-300 dark:bg-red-950 dark:text-red-300",
-    icon: "🚨",
+
   },
 ];
 
