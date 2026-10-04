@@ -50,8 +50,8 @@ export async function POST(req: Request) {
       paymentMethod: body.paymentMethod,
       notes: body.notes,
       userId: body.userId,
-      userName: body.userName,
       holdId: body.holdId,
+      sessionId: body.sessionId || null,
     });
 
     return NextResponse.json({ success: true, booking });

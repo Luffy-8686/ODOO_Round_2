@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { formatINR, formatDateTime, formatTime } from "@/lib/formatters";
 import { useAuth } from "@/lib/auth-context";
 import { calculateBarDiscount } from "@/lib/pricing";
+import { downloadPdfInvoice } from "@/lib/download-pdf";
 import {
   Coffee,
   Utensils,
@@ -21,6 +22,8 @@ import {
   Split,
   ChevronRight,
   UserCheck,
+  Download,
+  FileText,
 } from "lucide-react";
 
 export default function BarManagementPage(props: any) {
@@ -51,6 +54,7 @@ export default function BarManagementPage(props: any) {
   const [cardAmount, setCardAmount] = useState(0);
   const [manualDiscount, setManualDiscount] = useState(0);
   const [discountReason, setDiscountReason] = useState("");
+  const [settlementSuccess, setSettlementSuccess] = useState<any>(null);
 
   // Shift Modal
   const [showShiftModal, setShowShiftModal] = useState(false);
@@ -189,6 +193,7 @@ export default function BarManagementPage(props: any) {
 
   const handleOpenSettleModal = (tab: any) => {
     setTabToSettle(tab);
+    setSettlementSuccess(null);
     setCashAmount(Math.round(tab.finalAmountPaise / 100));
     setUpiAmount(0);
     setCardAmount(0);
@@ -220,8 +225,11 @@ export default function BarManagementPage(props: any) {
 
       const data = await res.json();
       if (data.success) {
-        alert(`Tab #${tabToSettle.tabNumber} settled successfully! Table is now FREE.`);
-        setShowSettleModal(false);
+        setSettlementSuccess({
+          tabNumber: tabToSettle.tabNumber,
+          tabId: tabToSettle.id,
+          finalAmountPaise: tabToSettle.finalAmountPaise,
+        });
         fetchBarData();
       } else {
         alert("Settlement error: " + data.error);
@@ -632,12 +640,28 @@ export default function BarManagementPage(props: any) {
                       {formatINR(tab.finalAmountPaise)}
                     </td>
                     <td className="p-3 text-right">
-                      <button
-                        onClick={() => handleOpenSettleModal(tab)}
-                        className="px-3.5 py-1.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider shadow-sm transition-colors"
-                      >
-                        Settle Tab →
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <a
+                          href={`/api/billing/invoice/${tab.id}/pdf`}
+                          download={`Invoice-${tab.tabNumber}.pdf`}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            downloadPdfInvoice(`/api/billing/invoice/${tab.id}/pdf`, `Invoice-${tab.tabNumber}.pdf`);
+                          }}
+                          className="px-2.5 py-1.5 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] hover:border-[#C5A059] text-[#0B1320] dark:text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1 shadow-2xs cursor-pointer"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>PDF</span>
+                        </a>
+                        <button
+                          onClick={() => handleOpenSettleModal(tab)}
+                          className="px-3.5 py-1.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider shadow-sm transition-colors"
+                        >
+                          Settle Tab →
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -697,87 +721,130 @@ export default function BarManagementPage(props: any) {
       {showSettleModal && tabToSettle && (
         <div className="fixed inset-0 bg-[#0B1320]/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-[#0E1522] border border-[#C5A059]/40 rounded-xl max-w-md w-full p-6 shadow-2xl relative text-xs space-y-4">
-            <h3 className="font-serif text-base font-bold text-[#0B1320] dark:text-white">
-              Settle Tab #{tabToSettle.tabNumber}
-            </h3>
-
-            <div className="p-4 rounded-md bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] space-y-1.5">
-              <div className="flex justify-between text-[#6B7280] dark:text-[#9CA3AF]">
-                <span>Items Subtotal:</span>
-                <span className="font-mono">{formatINR(tabToSettle.totalAmountPaise)}</span>
-              </div>
-              <div className="flex justify-between text-[#8C6D23] dark:text-[#DFCA9B] font-semibold">
-                <span>Member Tier Privilege:</span>
-                <span className="font-mono">-{formatINR(tabToSettle.discountAmountPaise)}</span>
-              </div>
-              <div className="flex justify-between font-serif font-bold text-sm pt-2 border-t border-[#E5DFD5] dark:border-[#222D3E]">
-                <span className="text-[#0B1320] dark:text-white">Net Due:</span>
-                <span className="text-[#921111] dark:text-[#DFCA9B] font-mono">{formatINR(tabToSettle.finalAmountPaise)}</span>
-              </div>
-            </div>
-
-            {/* Split Payment Inputs */}
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase font-bold text-[#8C6D23] dark:text-[#DFCA9B] tracking-wider block">Split Payment Settlement (₹)</label>
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <span className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] block font-bold">Cash (₹)</span>
-                  <input
-                    type="number"
-                    value={cashAmount}
-                    onChange={(e) => setCashAmount(Number(e.target.value))}
-                    className="w-full p-2 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] font-bold text-[#0B1320] dark:text-white"
-                  />
+            {settlementSuccess ? (
+              <div className="space-y-4 text-center py-2">
+                <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center">
+                  <CheckCircle2 className="w-7 h-7" />
                 </div>
                 <div>
-                  <span className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] block font-bold">UPI QR (₹)</span>
-                  <input
-                    type="number"
-                    value={upiAmount}
-                    onChange={(e) => setUpiAmount(Number(e.target.value))}
-                    className="w-full p-2 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] font-bold text-[#0B1320] dark:text-white"
-                  />
+                  <h3 className="font-serif text-lg font-bold text-[#0B1320] dark:text-white">
+                    Tab #{settlementSuccess.tabNumber} Settled
+                  </h3>
+                  <p className="text-[#6B7280] dark:text-[#9CA3AF] text-xs mt-1">
+                    Official receipt generated. Payment of {formatINR(settlementSuccess.finalAmountPaise)} recorded. Table freed.
+                  </p>
                 </div>
-                <div>
-                  <span className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] block font-bold">Card (₹)</span>
-                  <input
-                    type="number"
-                    value={cardAmount}
-                    onChange={(e) => setCardAmount(Number(e.target.value))}
-                    className="w-full p-2 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] font-bold text-[#0B1320] dark:text-white"
-                  />
+                <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                  <a
+                    href={`/api/billing/invoice/${settlementSuccess.tabId}/pdf`}
+                    download={`Invoice-${settlementSuccess.tabNumber}.pdf`}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      downloadPdfInvoice(`/api/billing/invoice/${settlementSuccess.tabId}/pdf`, `Invoice-${settlementSuccess.tabNumber}.pdf`);
+                    }}
+                    className="flex-1 py-2.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm text-center cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download PDF Invoice</span>
+                  </a>
+                  <button
+                    onClick={() => {
+                      setShowSettleModal(false);
+                      setSettlementSuccess(null);
+                    }}
+                    className="py-2.5 px-4 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] text-[#0B1320] dark:text-white font-bold text-xs uppercase tracking-wider"
+                  >
+                    Done
+                  </button>
                 </div>
               </div>
-            </div>
+            ) : (
+              <>
+                <h3 className="font-serif text-base font-bold text-[#0B1320] dark:text-white">
+                  Settle Tab #{tabToSettle.tabNumber}
+                </h3>
 
-            {/* UPI Dynamic QR Preview */}
-            {upiAmount > 0 && (
-              <div className="p-3 rounded-md bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] text-center space-y-1">
-                <span className="text-[10px] text-[#8C6D23] dark:text-[#DFCA9B] font-bold uppercase tracking-wider block">
-                  Scan to Pay ₹{upiAmount} via Club Gateway
-                </span>
-                <div className="w-24 h-24 bg-white mx-auto rounded-md flex items-center justify-center p-2 border border-[#C5A059]/40">
-                  <QrCode className="w-20 h-20 text-[#0B1320]" />
+                <div className="p-4 rounded-md bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] space-y-1.5">
+                  <div className="flex justify-between text-[#6B7280] dark:text-[#9CA3AF]">
+                    <span>Items Subtotal:</span>
+                    <span className="font-mono">{formatINR(tabToSettle.totalAmountPaise)}</span>
+                  </div>
+                  <div className="flex justify-between text-[#8C6D23] dark:text-[#DFCA9B] font-semibold">
+                    <span>Member Tier Privilege:</span>
+                    <span className="font-mono">-{formatINR(tabToSettle.discountAmountPaise)}</span>
+                  </div>
+                  <div className="flex justify-between font-serif font-bold text-sm pt-2 border-t border-[#E5DFD5] dark:border-[#222D3E]">
+                    <span className="text-[#0B1320] dark:text-white">Net Due:</span>
+                    <span className="text-[#921111] dark:text-[#DFCA9B] font-mono">{formatINR(tabToSettle.finalAmountPaise)}</span>
+                  </div>
                 </div>
-              </div>
+
+                {/* Split Payment Inputs */}
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase font-bold text-[#8C6D23] dark:text-[#DFCA9B] tracking-wider block">Split Payment Settlement (₹)</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <span className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] block font-bold">Cash (₹)</span>
+                      <input
+                        type="number"
+                        value={cashAmount}
+                        onChange={(e) => setCashAmount(Number(e.target.value))}
+                        className="w-full p-2 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] font-bold text-[#0B1320] dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] block font-bold">UPI QR (₹)</span>
+                      <input
+                        type="number"
+                        value={upiAmount}
+                        onChange={(e) => setUpiAmount(Number(e.target.value))}
+                        className="w-full p-2 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] font-bold text-[#0B1320] dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] block font-bold">Card (₹)</span>
+                      <input
+                        type="number"
+                        value={cardAmount}
+                        onChange={(e) => setCardAmount(Number(e.target.value))}
+                        className="w-full p-2 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] font-bold text-[#0B1320] dark:text-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* UPI Dynamic QR Preview */}
+                {upiAmount > 0 && (
+                  <div className="p-3 rounded-md bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] text-center space-y-1">
+                    <span className="text-[10px] text-[#8C6D23] dark:text-[#DFCA9B] font-bold uppercase tracking-wider block">
+                      Scan to Pay ₹{upiAmount} via Club Gateway
+                    </span>
+                    <div className="w-24 h-24 bg-white mx-auto rounded-md flex items-center justify-center p-2 border border-[#C5A059]/40">
+                      <QrCode className="w-20 h-20 text-[#0B1320]" />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowSettleModal(false)}
+                    className="flex-1 py-2.5 rounded-md bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] text-[#4B5563] dark:text-[#9CA3AF] font-bold text-xs uppercase tracking-wider transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExecuteSettlement}
+                    className="flex-1 py-2.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider shadow-sm transition-all"
+                  >
+                    Confirm Settlement
+                  </button>
+                </div>
+              </>
             )}
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowSettleModal(false)}
-                className="flex-1 py-2.5 rounded-md bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] text-[#4B5563] dark:text-[#9CA3AF] font-bold text-xs uppercase tracking-wider transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleExecuteSettlement}
-                className="flex-1 py-2.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider shadow-sm transition-all"
-              >
-                Confirm Settlement
-              </button>
-            </div>
           </div>
         </div>
       )}

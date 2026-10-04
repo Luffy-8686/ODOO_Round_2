@@ -49,6 +49,29 @@ export default function CourtsManagementPage() {
   // Maintenance Modal State
   const [showMaintModal, setShowMaintModal] = useState(false);
   const [maintReason, setMaintReason] = useState("");
+  const [refundingId, setRefundingId] = useState<string | null>(null);
+
+  const handleRefundBooking = async (bookingId: string) => {
+    setRefundingId(bookingId);
+    try {
+      const res = await fetch("/api/razorpay/refund", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId, reason: "Front desk staff processed Gold security deposit refund" }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        alert(data.error || "Failed to process refund");
+      } else {
+        alert(data.message || "₹100 Security deposit successfully refunded!");
+        fetchCourtData();
+      }
+    } catch (e: any) {
+      alert("Refund error: " + e.message);
+    } finally {
+      setRefundingId(null);
+    }
+  };
 
   const fetchCourtData = async () => {
     setLoading(true);
@@ -312,6 +335,28 @@ export default function CourtsManagementPage() {
                               <span>#{activeBooking.bookingNumber}</span>
                               <span className="font-mono">{formatINR(activeBooking.totalPricePaise)}</span>
                             </div>
+                            {(activeBooking.bookerType === "GOLD" || (activeBooking.securityDepositPaise || 0) > 0) && (
+                              <div className="mt-1 pt-1 border-t border-amber-600/30 flex items-center justify-between text-[9px]">
+                                <span className="font-bold">
+                                  {activeBooking.depositRefundStatus === "REFUNDED"
+                                    ? "₹100 Refunded"
+                                    : "₹100 Deposit Held"}
+                                </span>
+                                {activeBooking.depositRefundStatus !== "REFUNDED" && (
+                                  <button
+                                    type="button"
+                                    disabled={refundingId === activeBooking.id}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleRefundBooking(activeBooking.id);
+                                    }}
+                                    className="px-1.5 py-0.5 rounded bg-slate-950 text-white font-mono hover:bg-slate-800 disabled:opacity-50 cursor-pointer"
+                                  >
+                                    {refundingId === activeBooking.id ? "..." : "Refund ₹100"}
+                                  </button>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </td>
                       );
@@ -470,6 +515,12 @@ export default function CourtsManagementPage() {
                         </option>
                       ))}
                     </select>
+                    {members.find((m) => m.id === selectedMemberId)?.memberships?.[0]?.tier === "GOLD" && (
+                      <div className="mt-2 p-2 rounded bg-[#C5A059]/15 border border-[#C5A059]/30 text-[#8C6D23] dark:text-[#DFCA9B] text-[11px] font-bold flex items-center justify-between">
+                        <span>👑 Gold Tier: Free Court Access</span>
+                        <span className="font-mono text-[#921111] dark:text-[#DFCA9B]">₹100 Security Deposit (Refundable)</span>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-3">
@@ -513,6 +564,7 @@ export default function CourtsManagementPage() {
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       className="w-full p-2.5 rounded-lg border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#131C2E] text-xs text-[#0B1320] dark:text-white focus:outline-none focus:border-[#C5A059]"
                     >
+                      <option value="RAZORPAY">Razorpay Trial Gateway</option>
                       <option value="UPI">UPI Digital Payment</option>
                       <option value="CASH">Counter Cash</option>
                       <option value="CARD">Credit / Debit Card</option>

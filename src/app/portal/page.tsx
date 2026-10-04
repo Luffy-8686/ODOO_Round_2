@@ -1,9 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { formatINR, formatDate, formatDateTime } from "@/lib/formatters";
 import { useAuth } from "@/lib/auth-context";
-import { calculateCourtPrice, isPeakHour } from "@/lib/pricing";
+import { calculateCourtPrice, isPeakHour, calculateShopDiscount } from "@/lib/pricing";
+import { SECURITY_DEPOSIT_PAISE } from "@/lib/billing";
+import { RazorpayGatewayModal } from "@/components/razorpay-gateway-modal";
+import { downloadPdfInvoice } from "@/lib/download-pdf";
 import {
   QrCode,
   Calendar,
@@ -36,6 +39,10 @@ import {
   Sunset,
   Moon,
   Filter,
+  Lock,
+  Key,
+  Receipt,
+  Download,
 } from "lucide-react";
 
 const ALL_HOURLY_SLOTS = [
@@ -89,6 +96,32 @@ export default function MemberPortalPage(props: any) {
   const [joiningSocialId, setJoiningSocialId] = useState<string | null>(null);
   const [socialJoinSuccess, setSocialJoinSuccess] = useState<string | null>(null);
 
+  // Razorpay Gateway state for Trial mode & Gold deposit escrow
+  const [razorpayOrder, setRazorpayOrder] = useState<any>(null);
+  const [isRazorpayModalOpen, setIsRazorpayModalOpen] = useState(false);
+  const [refundingBookingId, setRefundingBookingId] = useState<string | null>(null);
+  const [refundAlert, setRefundAlert] = useState<{ success: boolean; message: string } | null>(null);
+
+  // TTL Slot Locking state
+  // sessionId: unique per browser tab, stable across re-renders
+  const sessionId = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    let sid = sessionStorage.getItem("cc_slot_session");
+    if (!sid) {
+      sid = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+      sessionStorage.setItem("cc_slot_session", sid);
+    }
+    return sid;
+  }, []);
+  const [slotLocks, setSlotLocks] = useState<
+    Array<{ courtId: string; slotTime: string; expiresAt: string; sessionId: string }>
+  >([]);
+  // lockCountdowns: { "courtId|slotTimeISO" -> secondsRemaining }
+  const [lockCountdowns, setLockCountdowns] = useState<Record<string, number>>({});
+  const [lockAcquireError, setLockAcquireError] = useState<string | null>(null);
+  // Track which lock we currently own so we can release it on modal close
+  const myLockRef = useRef<{ courtId: string; slotTime: string } | null>(null);
+
   // Bar & Cafe Ordering state
   const [cafeSubTab, setCafeSubTab] = useState<"MENU" | "TABLES" | "ORDERS">("MENU");
   const [selectedMenuCategory, setSelectedMenuCategory] = useState<string>("ALL");
@@ -118,6 +151,140 @@ export default function MemberPortalPage(props: any) {
   const [upgradeError, setUpgradeError] = useState<string | null>(null);
   const [showExpiryPopup, setShowExpiryPopup] = useState(false);
   const [hasDismissedExpiry, setHasDismissedExpiry] = useState(false);
+
+  // Pro Shop Cart & Itemized Billing State
+  const [shopCart, setShopCart] = useState<Array<{ product: any; variant: any; quantity: number }>>([]);
+  const [shopCheckoutModalOpen, setShopCheckoutModalOpen] = useState(false);
+  const [shopApiKey, setShopApiKey] = useState(process.env.NEXT_PUBLIC_BILLING_API_KEY || "");
+  const [shopFulfillmentType, setShopFulfillmentType] = useState<"CLICK_AND_COLLECT" | "HOME_DELIVERY">("CLICK_AND_COLLECT");
+  const [shopPaymentMethod, setShopPaymentMethod] = useState<"UPI" | "CARD" | "MEMBER_TAB">("UPI");
+  const [shopDeliveryAddress, setShopDeliveryAddress] = useState("");
+  const [shopCheckoutSubmitting, setShopCheckoutSubmitting] = useState(false);
+  const [shopReceipt, setShopReceipt] = useState<any | null>(null);
+  const [shopCheckoutError, setShopCheckoutError] = useState<string | null>(null);
+
+  // Shop Cart item operations
+  const addToShopCart = (product: any, variant?: any) => {
+    const selectedVariant = variant || product.variants?.[0] || {
+      id: product.id,
+      size: "Standard",
+      color: "Standard",
+      stockQuantity: 99,
+    };
+    setShopCart((prev) => {
+      const idx = prev.findIndex((i) => i.variant.id === selectedVariant.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = { ...next[idx], quantity: next[idx].quantity + 1 };
+        return next;
+      }
+      return [...prev, { product, variant: selectedVariant, quantity: 1 }];
+    });
+  };
+
+  const updateShopCartQty = (variantId: string, delta: number) => {
+    setShopCart((prev) =>
+      prev
+        .map((item) => (item.variant.id === variantId ? { ...item, quantity: item.quantity + delta } : item))
+        .filter((item) => item.quantity > 0)
+    );
+  };
+
+  const removeShopCartItem = (variantId: string) => {
+    setShopCart((prev) => prev.filter((item) => item.variant.id !== variantId));
+  };
+
+  // Membership Tier Discount Rule calculation
+  const currentMemberTier = member?.memberships?.[0]?.tier || "WALK_IN";
+  const customPlanShopDiscount = member?.memberships?.[0]?.plan?.shopDiscountPercent;
+  const shopDiscountPercent =
+    customPlanShopDiscount !== undefined && customPlanShopDiscount !== null
+      ? customPlanShopDiscount
+      : calculateShopDiscount(currentMemberTier);
+
+  // Real-time Itemized Billing Details: Full Prices, Tier Discount, 100 INR Security Deposit
+  const shopBillingDetails = useMemo(() => {
+    const items = shopCart.map((item) => {
+      const fullUnitPricePaise = item.product.pricePaise || 0;
+      const fullTotalPricePaise = fullUnitPricePaise * item.quantity;
+      const discountAmountPaise = Math.round((fullTotalPricePaise * shopDiscountPercent) / 100);
+      const netPricePaise = fullTotalPricePaise - discountAmountPaise;
+      return {
+        ...item,
+        fullUnitPricePaise,
+        fullTotalPricePaise,
+        discountPercent: shopDiscountPercent,
+        discountAmountPaise,
+        netPricePaise,
+      };
+    });
+
+    const totalFullPricePaise = items.reduce((sum, i) => sum + i.fullTotalPricePaise, 0);
+    const totalDiscountPaise = items.reduce((sum, i) => sum + i.discountAmountPaise, 0);
+    const netSubtotalPaise = totalFullPricePaise - totalDiscountPaise;
+    // Exactly 100 INR Security Deposit (10,000 paise)
+    const securityDepositPaise = items.length > 0 ? SECURITY_DEPOSIT_PAISE : 0;
+    const finalPayablePaise = netSubtotalPaise + securityDepositPaise;
+
+    return {
+      items,
+      totalFullPricePaise,
+      totalDiscountPaise,
+      netSubtotalPaise,
+      securityDepositPaise,
+      finalPayablePaise,
+      discountPercent: shopDiscountPercent,
+    };
+  }, [shopCart, shopDiscountPercent]);
+
+  // Execute Billing Checkout via /api/billing/checkout
+  const handleExecuteShopCheckout = async () => {
+    if (shopCart.length === 0) return;
+    setShopCheckoutSubmitting(true);
+    setShopCheckoutError(null);
+
+    try {
+      const res = await fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(shopApiKey.trim() ? { "x-billing-api-key": shopApiKey.trim() } : {}),
+        },
+        body: JSON.stringify({
+          memberId: member?.id || null,
+          customerName: member?.name || currentUser?.name || "Club Member",
+          customerPhone: member?.phone || "+91 99999 99999",
+          customerEmail: member?.email || currentUser?.email,
+          fulfillmentType: shopFulfillmentType,
+          deliveryAddress: shopFulfillmentType === "HOME_DELIVERY" ? shopDeliveryAddress : undefined,
+          paymentMethod: shopPaymentMethod,
+          apiKey: shopApiKey.trim() || undefined,
+          items: shopCart.map((i) => ({
+            variantId: i.variant.id,
+            quantity: i.quantity,
+            unitPricePaise: i.product.pricePaise,
+          })),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Checkout failed");
+      }
+
+      setShopReceipt({
+        order: data.order,
+        billing: data.billing,
+      });
+      setShopCart([]);
+      setShopCheckoutModalOpen(false);
+      await fetchMemberData();
+    } catch (err: any) {
+      setShopCheckoutError(err.message || "Failed to complete checkout");
+    } finally {
+      setShopCheckoutSubmitting(false);
+    }
+  };
 
   const handleUpgradeMembership = async () => {
     if (!member) return;
@@ -169,6 +336,7 @@ export default function MemberPortalPage(props: any) {
       if (crtData.bookings) setDayBookings(crtData.bookings);
       if (crtData.holds) setDayHolds(crtData.holds);
       if (crtData.socialSessions) setSocialSessions(crtData.socialSessions);
+      if (crtData.slotLocks) setSlotLocks(crtData.slotLocks);
       if (prdData.products) setProducts(prdData.products);
       if (menuData.items) setMenuItems(menuData.items);
       if (tblData.tables) {
@@ -187,6 +355,35 @@ export default function MemberPortalPage(props: any) {
   useEffect(() => {
     fetchMemberData();
   }, [currentUser, bookingDate]);
+
+  // ── Real-time countdown ticker for locked slots ────────────────────────────
+  useEffect(() => {
+    if (slotLocks.length === 0) {
+      setLockCountdowns({});
+      return;
+    }
+
+    const tick = () => {
+      const now = Date.now();
+      const next: Record<string, number> = {};
+      for (const lock of slotLocks) {
+        const key = `${lock.courtId}|${lock.slotTime}`;
+        const secs = Math.max(0, Math.ceil((new Date(lock.expiresAt).getTime() - now) / 1000));
+        if (secs > 0) next[key] = secs;
+      }
+      setLockCountdowns(next);
+      // If all locks have expired, refresh court data to clear them
+      if (Object.keys(next).length === 0 && slotLocks.length > 0) {
+        setSlotLocks([]);
+        fetchMemberData();
+      }
+    };
+
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slotLocks]);
 
   // Keep activeTab in sync with initialTab prop if it changes
   useEffect(() => {
@@ -301,35 +498,97 @@ export default function MemberPortalPage(props: any) {
     }
 
     const slotStart = new Date(`${bookingDate}T${time}:00`);
+    const activeTier = member?.memberships?.[0]?.tier || (isGold ? "GOLD" : "WALK_IN");
 
     try {
-      const res = await fetch("/api/bookings", {
+      // 1. Create Razorpay order (₹100 refundable deposit for Gold, tiered discount price for others)
+      const orderRes = await fetch("/api/razorpay/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           courtId: court.id,
-          memberId: member.id,
-          bookerName: member.name,
-          bookerPhone: member.phone,
-          bookerEmail: member.email,
+          memberId: member?.id,
+          bookerType: activeTier,
           startTime: slotStart.toISOString(),
           durationMinutes: 60,
-          source: "MEMBER_PORTAL",
-          userId: currentUser?.id,
-          userName: currentUser?.name,
-          holdId: activeHold?.id,
+          type: "COURT_BOOKING",
+        }),
+      });
+
+      const orderData = await orderRes.json();
+      if (!orderRes.ok || orderData.error) {
+        throw new Error(orderData.error || "Failed to initialize Razorpay checkout order");
+      }
+
+      setRazorpayOrder(orderData);
+      setIsRazorpayModalOpen(true);
+    } catch (err: any) {
+      setModalError(err.message || "Failed to initialize checkout.");
+      setBookingError(err.message || "Failed to initialize checkout.");
+    } finally {
+      setIsBookingSubmitting(false);
+    }
+  };
+
+  const handleRazorpayPaymentSuccess = async (paymentResult: {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+  }) => {
+    if (!confirmSlotModal) return;
+    setIsBookingSubmitting(true);
+    setBookingError(null);
+    setModalError(null);
+
+    const { court, time } = confirmSlotModal;
+    const slotStart = new Date(`${bookingDate}T${time}:00`);
+    const activeTier = member?.memberships?.[0]?.tier || (isGold ? "GOLD" : "WALK_IN");
+
+    try {
+      const res = await fetch("/api/razorpay/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          razorpay_order_id: paymentResult.razorpay_order_id,
+          razorpay_payment_id: paymentResult.razorpay_payment_id,
+          razorpay_signature: paymentResult.razorpay_signature,
+          bookingData: {
+            courtId: court.id,
+            memberId: member.id,
+            bookerName: member.name,
+            bookerPhone: member.phone,
+            bookerEmail: member.email,
+            bookerType: activeTier,
+            startTime: slotStart.toISOString(),
+            durationMinutes: 60,
+            source: "MEMBER_PORTAL",
+            userId: currentUser?.id,
+            userName: currentUser?.name,
+            holdId: activeHold?.id,
+            sessionId,
+            notes: isGold
+              ? "Gold Member Booking (₹100 Security Deposit held via Razorpay Trial Gateway)"
+              : `Member Court Booking (${activeTier} via Razorpay)`,
+          },
         }),
       });
 
       const data = await res.json();
       if (!res.ok || data.error) {
-        // Render error prominently inside modal
-        setModalError(data.error || "Booking failed");
-        setBookingError(data.error || "Booking failed");
+        setModalError(data.error || "Booking verification failed");
+        setBookingError(data.error || "Booking verification failed");
       } else {
         setBookingSuccess(data.booking);
+        setIsRazorpayModalOpen(false);
         setConfirmSlotModal(null);
         setActiveHold(null);
+        myLockRef.current = null;
+        // Release lock proactively
+        fetch("/api/slot-lock", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ courtId: court.id, slotTime: slotStart.toISOString(), sessionId }),
+        }).catch(() => {});
         await fetchMemberData();
       }
     } catch (err: any) {
@@ -339,6 +598,95 @@ export default function MemberPortalPage(props: any) {
       setIsBookingSubmitting(false);
     }
   };
+
+  const handleClaimRefund = async (bookingId: string) => {
+    setRefundingBookingId(bookingId);
+    setRefundAlert(null);
+    try {
+      const res = await fetch("/api/razorpay/refund", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setRefundAlert({ success: false, message: data.error || "Failed to process refund" });
+      } else {
+        setRefundAlert({
+          success: true,
+          message: data.message || "₹100 INR Security deposit has been refunded to your original payment method.",
+        });
+        await fetchMemberData();
+      }
+    } catch (err: any) {
+      setRefundAlert({ success: false, message: err.message });
+    } finally {
+      setRefundingBookingId(null);
+    }
+  };
+
+  /** Called when user clicks a free slot — tries to acquire the 300s lock first */
+  const handleSlotClick = useCallback(
+    async (court: any, time: string) => {
+      setLockAcquireError(null);
+      setBookingError(null);
+      setBookingSuccess(null);
+
+      const slotStart = new Date(`${bookingDate}T${time}:00`);
+      const slotTimeISO = slotStart.toISOString();
+
+      const res = await fetch("/api/slot-lock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          courtId: court.id,
+          slotTime: slotTimeISO,
+          sessionId,
+          memberId: member?.id,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.acquired) {
+        // We own the lock — open confirmation modal
+        myLockRef.current = { courtId: court.id, slotTime: slotTimeISO };
+        setSlotLocks((prev) => [
+          ...prev.filter((l) => !(l.courtId === court.id && l.slotTime === slotTimeISO)),
+          { courtId: court.id, slotTime: slotTimeISO, expiresAt: data.expiresAt, sessionId: data.sessionId },
+        ]);
+        setBookingError(null);
+        setConfirmSlotModal({ court, time });
+      } else {
+        // Slot locked by another user
+        const secs = data.secondsRemaining ?? 0;
+        setLockAcquireError(
+          `⏳ This slot is temporarily held by another member. Try again in ${secs} second${secs !== 1 ? "s" : ""}.`
+        );
+        await fetchMemberData();
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [bookingDate, sessionId, member]
+  );
+
+  /** Releases ephemeral lock and closes confirmation modal */
+  const handleCloseConfirmModal = useCallback(() => {
+    if (myLockRef.current) {
+      const { courtId, slotTime } = myLockRef.current;
+      fetch("/api/slot-lock", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ courtId, slotTime, sessionId }),
+      }).catch(() => {});
+      setSlotLocks((prev) =>
+        prev.filter((l) => !(l.courtId === courtId && l.slotTime === slotTime && l.sessionId === sessionId))
+      );
+      myLockRef.current = null;
+    }
+    setBookingError(null);
+    setConfirmSlotModal(null);
+  }, [sessionId]);
 
   const handleCancelBooking = async (bookingId: string) => {
     if (!confirm("Are you sure you want to cancel this booked slot? Your slot will be released back to the club schedule.")) {
@@ -405,6 +753,27 @@ export default function MemberPortalPage(props: any) {
     const slotDate = new Date();
     slotDate.setHours(h, m, 0, 0);
     return slotDate < now;
+  };
+
+  /** Returns the lock entry if the slot is locked by someone OTHER than me */
+  const getSlotLockForOther = (courtId: string, timeStr: string) => {
+    const slotStart = new Date(`${bookingDate}T${timeStr}:00`);
+    const slotTimeISO = slotStart.toISOString();
+    const lock = slotLocks.find(
+      (l) => l.courtId === courtId && l.slotTime === slotTimeISO && l.sessionId !== sessionId
+    );
+    if (!lock) return null;
+    const secs = lockCountdowns[`${courtId}|${slotTimeISO}`] ?? 0;
+    return secs > 0 ? { ...lock, secondsRemaining: secs } : null;
+  };
+
+  /** Returns true if WE hold the lock on this slot (showing confirm modal or just acquired) */
+  const isSlotLockedByMe = (courtId: string, timeStr: string) => {
+    const slotStart = new Date(`${bookingDate}T${timeStr}:00`);
+    const slotTimeISO = slotStart.toISOString();
+    return slotLocks.some(
+      (l) => l.courtId === courtId && l.slotTime === slotTimeISO && l.sessionId === sessionId
+    );
   };
 
   const getFilteredSlots = () => {
@@ -684,13 +1053,19 @@ export default function MemberPortalPage(props: any) {
           </button>
           <button
             onClick={() => setActiveTab("SHOP")}
-            className={`px-3 py-1.5 rounded transition-all ${
+            className={`px-3 py-1.5 rounded transition-all flex items-center gap-1.5 ${
               activeTab === "SHOP"
                 ? "bg-[#921111] text-white shadow-sm font-bold"
                 : "text-[#4B5563] dark:text-[#9CA3AF] hover:text-[#921111] dark:hover:text-white"
             }`}
           >
-            Pro Shop
+            <ShoppingBag className="w-3.5 h-3.5" />
+            <span>Pro Shop</span>
+            {shopCart.length > 0 && (
+              <span className="text-[9px] px-1.5 py-0.2 rounded font-mono font-bold bg-[#C5A059] text-[#0B1320]">
+                {shopCart.reduce((a, b) => a + b.quantity, 0)}
+              </span>
+            )}
           </button>
           <button
             onClick={() => setActiveTab("TABS")}
@@ -1020,6 +1395,32 @@ export default function MemberPortalPage(props: any) {
             ))}
           </div>
 
+          {/* Refund Alert Message */}
+          {refundAlert && (
+            <div
+              className={`p-3.5 rounded-lg border text-xs flex items-center justify-between gap-2 shadow-xs ${
+                refundAlert.success
+                  ? "bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300"
+                  : "bg-red-50 dark:bg-red-950/60 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                {refundAlert.success ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                )}
+                <span>{refundAlert.message}</span>
+              </div>
+              <button
+                onClick={() => setRefundAlert(null)}
+                className="text-xs font-bold uppercase opacity-80 hover:opacity-100"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+
           {/* Bookings List Cards */}
           {filteredBookings.length === 0 ? (
             <div className="text-center py-12 rounded-lg bg-[#FAF8F5] dark:bg-[#121A28] border border-dashed border-[#E5DFD5] dark:border-[#222D3E] space-y-3">
@@ -1045,6 +1446,9 @@ export default function MemberPortalPage(props: any) {
               {filteredBookings.map((booking) => {
                 const isUpcoming = new Date(booking.startTime) >= now && booking.status !== "CANCELLED";
                 const isCancelled = booking.status === "CANCELLED";
+                const isSlotEnded = new Date(booking.endTime) <= now || booking.status === "COMPLETED";
+                const hasDeposit = (booking.securityDepositPaise || 0) > 0 || booking.bookerType === "GOLD";
+                const isDepositRefunded = booking.depositRefundStatus === "REFUNDED";
 
                 return (
                   <div
@@ -1123,6 +1527,51 @@ export default function MemberPortalPage(props: any) {
                         </span>
                       </div>
                     </div>
+
+                    {/* Gold Member 100 INR Security Deposit Status */}
+                    {hasDeposit && (
+                      <div className="text-xs">
+                        {isDepositRefunded ? (
+                          <div className="p-2.5 rounded bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 font-bold">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                              <span>₹100 Security Deposit Refunded</span>
+                            </div>
+                            <span className="font-mono text-[10px] text-emerald-700 dark:text-emerald-400">
+                              {booking.depositRefundedAt ? formatDate(booking.depositRefundedAt) : "Refund Completed"}
+                            </span>
+                          </div>
+                        ) : isSlotEnded ? (
+                          <div className="p-2.5 rounded bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-blue-900 dark:text-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 font-bold">
+                              <Clock className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                              <span>Slot Ended: ₹100 Deposit Ready for Refund</span>
+                            </div>
+                            <button
+                              type="button"
+                              disabled={refundingBookingId === booking.id}
+                              onClick={() => handleClaimRefund(booking.id)}
+                              className="px-3 py-1.5 rounded bg-[#0C2340] hover:bg-[#08172b] text-white font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-1 transition-all disabled:opacity-50 cursor-pointer"
+                            >
+                              {refundingBookingId === booking.id ? (
+                                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <RefreshCw className="w-3 h-3 text-[#DFCA9B]" />
+                              )}
+                              <span>{refundingBookingId === booking.id ? "Refunding..." : "Claim ₹100 Refund"}</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="p-2.5 rounded bg-[#C5A059]/15 border border-[#C5A059]/30 text-[#8C6D23] dark:text-[#DFCA9B] flex items-center justify-between">
+                            <div className="flex items-center gap-1.5 font-bold">
+                              <ShieldCheck className="w-3.5 h-3.5 text-[#C5A059] shrink-0" />
+                              <span>₹100 Security Deposit in Escrow</span>
+                            </div>
+                            <span className="text-[10px] opacity-90">Auto-refunds when slot ends</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Actions */}
                     <div className="flex items-center justify-between gap-2 pt-1">
@@ -1247,6 +1696,29 @@ export default function MemberPortalPage(props: any) {
             </div>
           </div>
 
+          {/* Feedback alerts */}
+          {lockAcquireError && (
+            <div className="p-3.5 rounded-md bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs flex items-center justify-between gap-2 shadow-xs">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-amber-500" />
+                <span>{lockAcquireError}</span>
+              </div>
+              <button
+                onClick={() => setLockAcquireError(null)}
+                className="text-amber-600 dark:text-amber-400 hover:text-amber-900 text-xs font-bold"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+
+          {bookingError && (
+            <div className="p-3.5 rounded-md bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+              <span>{bookingError}</span>
+            </div>
+          )}
+
           {/* FRIDAY NIGHT SOCIAL PLAY FEATURE CARD */}
           {socialSessions && socialSessions.length > 0 && (
             <div className="space-y-3">
@@ -1333,6 +1805,27 @@ export default function MemberPortalPage(props: any) {
             </div>
           )}
 
+          {/* Slot Legend */}
+          <div className="flex flex-wrap items-center gap-4 text-[10px] font-mono uppercase tracking-wider text-[#6B7280] dark:text-[#9CA3AF] bg-[#FAF8F5] dark:bg-[#121A28] p-2.5 rounded-md border border-[#E5DFD5] dark:border-[#222D3E]">
+            <span className="font-bold text-[#8C6D23] dark:text-[#DFCA9B]">Legend:</span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-xs bg-white dark:bg-[#0E1522] border border-[#E5DFD5] dark:border-[#222D3E]" />
+              <span>Available</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-xs bg-amber-400/80 border border-amber-500" />
+              <span>Locked (300s TTL)</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-xs bg-blue-500/80 border border-blue-600" />
+              <span>Held by You</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-xs bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] opacity-60" />
+              <span>Booked / Past</span>
+            </span>
+          </div>
+
           {/* Courts Grid with Full Hourly Slots */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {filteredCourts.map((court) => {
@@ -1382,7 +1875,7 @@ export default function MemberPortalPage(props: any) {
                     <div className="flex items-center justify-between pb-2 text-[10px] font-bold text-[#8C6D23] dark:text-[#DFCA9B] uppercase tracking-wider">
                       <span>Available 60-Minute Slots:</span>
                       <span className="font-mono text-[#6B7280] dark:text-[#9CA3AF]">
-                        {slotsToDisplay.filter((t) => !isSlotBooked(court.id, t) && !isSlotHeld(court.id, t) && !isSlotPast(t)).length} open slots
+                        {slotsToDisplay.filter((t) => !isSlotBooked(court.id, t) && !isSlotHeld(court.id, t) && !isSlotPast(t) && !getSlotLockForOther(court.id, t)).length} open slots
                       </span>
                     </div>
 
@@ -1391,6 +1884,8 @@ export default function MemberPortalPage(props: any) {
                         const booked = isSlotBooked(court.id, t);
                         const held = isSlotHeld(court.id, t);
                         const past = isSlotPast(t);
+                        const lockedOther = getSlotLockForOther(court.id, t);
+                        const lockedByMe = isSlotLockedByMe(court.id, t);
                         const isEvening = parseInt(t.split(":")[0]) >= 18;
 
                         if (booked) {
@@ -1429,6 +1924,43 @@ export default function MemberPortalPage(props: any) {
                               <span>{t}</span>
                               <span className="block text-[8px] uppercase tracking-tighter">Past</span>
                             </div>
+                          );
+                        }
+
+                        if (lockedOther) {
+                          return (
+                            <div
+                              key={t}
+                              className="py-1.5 px-1 rounded-md bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 text-center text-[10px] font-mono font-bold cursor-not-allowed select-none animate-pulse"
+                              title={`Slot held by another member (${lockedOther.secondsRemaining}s remaining)`}
+                            >
+                              <div className="flex items-center justify-center gap-0.5">
+                                <Lock className="w-2.5 h-2.5 shrink-0" />
+                                <span>{t}</span>
+                              </div>
+                              <span className="block text-[8px] text-amber-600 dark:text-amber-400 uppercase tracking-tighter font-sans">
+                                {lockedOther.secondsRemaining}s
+                              </span>
+                            </div>
+                          );
+                        }
+
+                        if (lockedByMe) {
+                          return (
+                            <button
+                              key={t}
+                              onClick={() => setConfirmSlotModal({ court, time: t })}
+                              className="py-1.5 px-1 rounded-md bg-blue-50 dark:bg-blue-950/50 border-2 border-blue-500 text-blue-800 dark:text-blue-200 text-center text-[10px] font-mono font-bold hover:bg-blue-100 transition-all shadow-xs relative"
+                              title="Held by your session — click to confirm"
+                            >
+                              <div className="flex items-center justify-center gap-0.5">
+                                <Lock className="w-2.5 h-2.5 text-blue-600 shrink-0" />
+                                <span>{t}</span>
+                              </div>
+                              <span className="block text-[8px] text-blue-600 dark:text-blue-400 uppercase tracking-tighter font-sans font-extrabold">
+                                Yours
+                              </span>
+                            </button>
                           );
                         }
 
@@ -1512,7 +2044,7 @@ export default function MemberPortalPage(props: any) {
 
           {/* Feedback alerts */}
           {orderPlacedSuccess && (
-            <div className="p-4 rounded-md bg-[#C5A059]/15 border border-[#C5A059]/40 text-[#0B1320] dark:text-white text-xs flex items-center justify-between gap-4">
+            <div className="p-4 rounded-md bg-[#C5A059]/15 border border-[#C5A059]/40 text-[#0B1320] dark:text-white text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <ChefHat className="w-6 h-6 text-[#921111] shrink-0" />
                 <div>
@@ -1522,12 +2054,31 @@ export default function MemberPortalPage(props: any) {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setCafeSubTab("ORDERS")}
-                className="px-3.5 py-1.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider shrink-0 shadow-xs"
-              >
-                View Tab
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={`/api/billing/invoice/${orderPlacedSuccess.id || orderPlacedSuccess.orderNumber}/pdf`}
+                  target="_blank"
+                  rel="noreferrer"
+                  download={`Invoice-${orderPlacedSuccess.orderNumber || "Cafe"}.pdf`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    downloadPdfInvoice(
+                      `/api/billing/invoice/${orderPlacedSuccess.id || orderPlacedSuccess.orderNumber}/pdf`,
+                      `Invoice-${orderPlacedSuccess.orderNumber || "Cafe"}.pdf`
+                    );
+                  }}
+                  className="px-3.5 py-1.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider shadow-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>PDF Invoice</span>
+                </a>
+                <button
+                  onClick={() => setCafeSubTab("ORDERS")}
+                  className="px-3.5 py-1.5 rounded-md bg-white dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] text-[#0B1320] dark:text-white hover:border-[#C5A059] font-bold text-xs uppercase tracking-wider shadow-xs"
+                >
+                  View Tab
+                </button>
+              </div>
             </div>
           )}
 
@@ -1902,6 +2453,7 @@ export default function MemberPortalPage(props: any) {
                       <th className="p-3">Privilege (₹)</th>
                       <th className="p-3">Final Amount (₹)</th>
                       <th className="p-3">Status</th>
+                      <th className="p-3 text-right">Tax Invoice</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#E5DFD5] dark:divide-[#222D3E]">
@@ -1918,6 +2470,22 @@ export default function MemberPortalPage(props: any) {
                             {t.status}
                           </span>
                         </td>
+                        <td className="p-3 text-right">
+                          <a
+                            href={`/api/billing/invoice/${t.id}/pdf`}
+                            download={`Invoice-${t.tabNumber}.pdf`}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              downloadPdfInvoice(`/api/billing/invoice/${t.id}/pdf`, `Invoice-${t.tabNumber}.pdf`);
+                            }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-[10px] uppercase tracking-wider shadow-2xs transition-colors cursor-pointer"
+                          >
+                            <Download className="w-3 h-3" />
+                            <span>PDF Invoice</span>
+                          </a>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1928,43 +2496,192 @@ export default function MemberPortalPage(props: any) {
         </div>
       )}
 
-      {/* 5. PRO SHOP CATALOG VIEW */}
+      {/* 5. PRO SHOP CATALOG VIEW WITH BILLING SERVICE */}
       {activeTab === "SHOP" && (
-        <div className="p-6 rounded-lg bg-white dark:bg-[#0E1522] border border-[#E5DFD5] dark:border-[#222D3E] shadow-sm space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-[#E5DFD5] dark:border-[#222D3E]">
-            <div>
-              <h3 className="font-serif text-lg font-bold text-[#0B1320] dark:text-white">Pro Shop Official Athletic Equipment</h3>
-              <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Championship grade racquets, balls, footwear & performance apparel.</p>
-            </div>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#C5A059]/15 text-[#8C6D23] dark:text-[#DFCA9B] border border-[#C5A059]/30 font-bold uppercase tracking-wider">
-              {products.length} CATALOG ITEMS
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            {products.map((p) => (
-              <div
-                key={p.id}
-                className="p-4 rounded-lg border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5]/60 dark:bg-[#121A28]/60 hover:border-[#C5A059] flex flex-col justify-between text-xs space-y-3 transition-all"
-              >
-                <div>
-                  <span className="text-[9px] font-mono font-bold text-[#8C6D23] dark:text-[#DFCA9B] uppercase tracking-wider block">{p.brand}</span>
-                  <h4 className="font-serif font-bold text-[#0B1320] dark:text-white text-sm mt-1">{p.name}</h4>
+        <div className="space-y-6">
+          <div className="p-6 rounded-lg bg-white dark:bg-[#0E1522] border border-[#E5DFD5] dark:border-[#222D3E] shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-[#E5DFD5] dark:border-[#222D3E]">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-serif text-lg font-bold text-[#0B1320] dark:text-white">
+                    Pro Shop Official Athletic Equipment
+                  </h3>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#C5A059]/15 text-[#8C6D23] dark:text-[#DFCA9B] border border-[#C5A059]/30 font-bold uppercase tracking-wider">
+                    {products.length} CATALOG ITEMS
+                  </span>
                 </div>
-                <div className="pt-2 border-t border-[#E5DFD5] dark:border-[#222D3E] flex items-center justify-between">
+                <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] mt-0.5">
+                  Championship grade racquets, balls, footwear & apparel with member tier privilege discounts.
+                </p>
+              </div>
+
+              {/* Membership privilege badge & Cart checkout action */}
+              <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                <div className="px-3 py-1.5 rounded-lg bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] text-right">
+                  <span className="text-[9px] uppercase tracking-wider font-bold text-[#5A6578] dark:text-[#8E9CAE] block">
+                    Tier Privilege
+                  </span>
+                  <span className="font-bold text-xs text-[#8C6D23] dark:text-[#DFCA9B]">
+                    {currentMemberTier} ({shopDiscountPercent}% Off)
+                  </span>
+                </div>
+
+                {shopCart.length > 0 && (
+                  <button
+                    onClick={() => setShopCheckoutModalOpen(true)}
+                    className="px-4 py-2 rounded-lg bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-md transition-all cursor-pointer animate-pulse"
+                  >
+                    <ShoppingBag className="w-3.5 h-3.5" />
+                    <span>Checkout Cart ({shopCart.reduce((a, b) => a + b.quantity, 0)})</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Active Cart Banner / Floating drawer summary */}
+            {shopCart.length > 0 && (
+              <div className="p-4 rounded-lg bg-[#FAF8F5] dark:bg-[#121A28] border border-[#C5A059]/40 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#921111]/10 text-[#921111] dark:text-[#DFCA9B] flex items-center justify-center shrink-0">
+                    <Receipt className="w-5 h-5" />
+                  </div>
                   <div>
-                    <span className="font-serif font-bold text-sm text-[#0B1320] dark:text-white block">{formatINR(p.pricePaise)}</span>
-                    <span className="text-[9px] text-[#8C6D23] dark:text-[#DFCA9B] uppercase font-bold tracking-wider">Tier Allowance Applies</span>
+                    <h4 className="font-serif font-bold text-xs text-[#0B1320] dark:text-white">
+                      Selected Items: {shopCart.length} product{shopCart.length > 1 ? "s" : ""} ({shopCart.reduce((a, b) => a + b.quantity, 0)} units)
+                    </h4>
+                    <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">
+                      Full Price: <strong className="font-mono">{formatINR(shopBillingDetails.totalFullPricePaise)}</strong> • Tier Discount: <strong className="font-mono text-[#8C6D23] dark:text-[#DFCA9B]">-{formatINR(shopBillingDetails.totalDiscountPaise)}</strong> • Security Deposit: <strong className="font-mono text-[#0B1320] dark:text-white">+₹100 INR</strong>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+                  <div className="text-right">
+                    <span className="text-[9px] uppercase tracking-wider font-bold text-[#6B7280] dark:text-[#9CA3AF] block">
+                      Payable Total (incl. ₹100 deposit)
+                    </span>
+                    <span className="font-serif font-bold text-base text-[#921111] dark:text-[#DFCA9B]">
+                      {formatINR(shopBillingDetails.finalPayablePaise)}
+                    </span>
                   </div>
                   <button
-                    onClick={() => alert("Click & Collect order submitted to Pro Shop counter!")}
-                    className="px-3 py-1.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider shadow-xs"
+                    onClick={() => setShopCheckoutModalOpen(true)}
+                    className="px-4 py-2.5 rounded-lg bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
                   >
-                    Acquire
+                    <span>Proceed to Billing Checkout</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
-            ))}
+            )}
+
+            {/* Product Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              {products.map((p) => {
+                const inCartItem = shopCart.find((i) => i.product.id === p.id);
+                const fullPrice = p.pricePaise;
+                const discountPaise = Math.round((fullPrice * shopDiscountPercent) / 100);
+                const memberPricePaise = Math.max(0, fullPrice - discountPaise);
+
+                return (
+                  <div
+                    key={p.id}
+                    className="p-4 rounded-lg border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5]/60 dark:bg-[#121A28]/60 hover:border-[#C5A059] flex flex-col justify-between text-xs space-y-3 transition-all"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] font-mono font-bold text-[#8C6D23] dark:text-[#DFCA9B] uppercase tracking-wider">
+                          {p.brand || "CHAMPIONS"}
+                        </span>
+                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+                          {p.category}
+                        </span>
+                      </div>
+                      <h4 className="font-serif font-bold text-[#0B1320] dark:text-white text-sm mt-1">
+                        {p.name}
+                      </h4>
+                      {p.sku && (
+                        <span className="text-[10px] font-mono text-[#8E9CAE]">SKU: {p.sku}</span>
+                      )}
+                    </div>
+
+                    <div className="pt-2 border-t border-[#E5DFD5] dark:border-[#222D3E] space-y-2">
+                      <div className="flex items-baseline justify-between">
+                        <div>
+                          <span className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] block">Full Price:</span>
+                          <span className={`font-mono text-xs ${shopDiscountPercent > 0 ? "line-through text-gray-400" : "font-bold text-[#0B1320] dark:text-white"}`}>
+                            {formatINR(fullPrice)}
+                          </span>
+                        </div>
+                        {shopDiscountPercent > 0 && (
+                          <div className="text-right">
+                            <span className="text-[10px] text-[#8C6D23] dark:text-[#DFCA9B] font-bold block">
+                              Member Rate:
+                            </span>
+                            <span className="font-serif font-bold text-sm text-[#921111] dark:text-[#DFCA9B]">
+                              {formatINR(memberPricePaise)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {shopDiscountPercent > 0 && (
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="text-[#8C6D23] dark:text-[#DFCA9B] font-bold">
+                            Save {shopDiscountPercent}% (-{formatINR(discountPaise)})
+                          </span>
+                          <span className="text-[9px] text-[#6B7280] dark:text-[#9CA3AF] font-mono">
+                            + ₹100 deposit
+                          </span>
+                        </div>
+                      )}
+
+                      {inCartItem ? (
+                        <div className="flex items-center justify-between pt-1">
+                          <div className="flex items-center gap-1.5 border border-[#E5DFD5] dark:border-[#222D3E] rounded p-0.5 bg-white dark:bg-[#0E1522]">
+                            <button
+                              type="button"
+                              onClick={() => updateShopCartQty(inCartItem.variant.id, -1)}
+                              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-[#0B1320] dark:text-white"
+                            >
+                              <Minus className="w-3 h-3" />
+                            </button>
+                            <span className="font-mono font-bold px-1.5 text-xs text-[#0B1320] dark:text-white">
+                              {inCartItem.quantity}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => updateShopCartQty(inCartItem.variant.id, 1)}
+                              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-[#0B1320] dark:text-white"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </button>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setShopCheckoutModalOpen(true)}
+                            className="px-2.5 py-1.5 rounded bg-[#921111] text-white font-bold text-[11px] uppercase tracking-wider"
+                          >
+                            Checkout
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            addToShopCart(p);
+                            setShopCheckoutModalOpen(true);
+                          }}
+                          className="w-full py-2 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider shadow-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                        >
+                          <ShoppingBag className="w-3 h-3" />
+                          <span>Buy / Acquire</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
@@ -2077,7 +2794,7 @@ export default function MemberPortalPage(props: any) {
         <div className="fixed inset-0 z-50 bg-[#0B1320]/80 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white dark:bg-[#0E1522] rounded-xl max-w-md w-full border border-[#C5A059]/40 p-6 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95">
             <button
-              onClick={() => setConfirmSlotModal(null)}
+              onClick={handleCloseConfirmModal}
               className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-[#FAF8F5] dark:hover:bg-[#121A28] text-[#6B7280] hover:text-[#0B1320] dark:hover:text-white transition-colors"
             >
               <X className="w-4 h-4" />
@@ -2120,10 +2837,6 @@ export default function MemberPortalPage(props: any) {
                 >
                   {String(Math.floor(holdSecondsRemaining / 60)).padStart(2, "0")}:
                   {String(holdSecondsRemaining % 60).padStart(2, "0")}
-                </span>
-              </div>
-            </div>
-
             {/* In-Modal Booking Error Alert (Always in front of modal) */}
             {modalError && (
               <div className="p-3.5 rounded-lg bg-red-50 dark:bg-red-950/80 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-start gap-2.5 shadow-sm animate-in fade-in slide-in-from-top-2">
@@ -2186,6 +2899,27 @@ export default function MemberPortalPage(props: any) {
                       {modalPricing.finalPricePaise === 0 ? "Complimentary (Gold Privilege)" : formatINR(modalPricing.finalPricePaise)}
                     </span>
                   </div>
+
+                  {isGold ? (
+                    <>
+                      <div className="flex justify-between items-center text-[#8C6D23] dark:text-[#DFCA9B] font-bold bg-[#C5A059]/10 p-2 rounded border border-[#C5A059]/30">
+                        <div className="flex items-center gap-1.5">
+                          <ShieldCheck className="w-4 h-4 text-[#C5A059]" />
+                          <span>Security Deposit (Gold Member):</span>
+                        </div>
+                        <span className="font-mono text-sm">+₹100.00</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-1 font-serif font-bold text-sm text-[#921111] dark:text-[#DFCA9B]">
+                        <span>Total Due (Refundable Escrow):</span>
+                        <span className="font-mono text-base">₹100.00</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-between items-center pt-1 font-serif font-bold text-sm text-[#921111] dark:text-[#DFCA9B]">
+                      <span>Total Payable:</span>
+                      <span className="font-mono text-base">{formatINR(modalPricing.finalPricePaise)}</span>
+                    </div>
+                  )}
                 </div>
               );
             })()}
@@ -2194,6 +2928,16 @@ export default function MemberPortalPage(props: any) {
               <div className="p-3 rounded-md bg-[#C5A059]/15 border border-[#C5A059]/30 text-[11px] text-[#8C6D23] dark:text-[#DFCA9B] flex items-center gap-2">
                 <Flame className="w-4 h-4 shrink-0 text-[#921111]" />
                 <span>Evening peak slot: Court floodlights will be automatically activated.</span>
+              </div>
+            )}
+
+            {bookingError && (
+              <div className="p-3 rounded-md bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 text-xs flex items-start gap-2 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600 dark:text-red-400" />
+                <div className="text-[11px] leading-relaxed">
+                  <strong className="block font-bold">Booking Notice</strong>
+                  <span>{bookingError}</span>
+                </div>
               </div>
             )}
 
@@ -2209,19 +2953,21 @@ export default function MemberPortalPage(props: any) {
                 type="button"
                 disabled={isBookingSubmitting || holdSecondsRemaining <= 0}
                 onClick={() => handlePortalBooking(confirmSlotModal.court, confirmSlotModal.time)}
-                className="flex-1 py-2.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+                className="flex-1 py-2.5 rounded-md bg-[#0C2340] hover:bg-[#08172b] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm transition-all disabled:opacity-50 cursor-pointer"
               >
                 {isBookingSubmitting ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  <Check className="w-4 h-4" />
+                  <ShieldCheck className="w-4 h-4 text-[#DFCA9B]" />
                 )}
                 <span>
                   {isBookingSubmitting
-                    ? "Locking Slot..."
+                    ? "Opening Razorpay..."
                     : holdSecondsRemaining <= 0
                     ? "Hold Expired"
-                    : "Confirm & Book"}
+                    : isGold
+                    ? "Pay ₹100 Deposit (Razorpay)"
+                    : "Pay via Razorpay"}
                 </span>
               </button>
             </div>
@@ -2281,16 +3027,33 @@ export default function MemberPortalPage(props: any) {
                   {selectedBookingModal.status}
                 </span>
               </div>
+              {((selectedBookingModal.securityDepositPaise ?? (selectedBookingModal.bookerType === "GOLD" ? 10000 : 0)) > 0) && (
+                <div className="flex items-center justify-between text-[#8C6D23] dark:text-[#DFCA9B] font-bold bg-[#C5A059]/10 p-2 rounded border border-[#C5A059]/30">
+                  <span>Security Deposit (Refundable):</span>
+                  <span className="font-mono">+{formatINR(selectedBookingModal.securityDepositPaise || 10000)}</span>
+                </div>
+              )}
             </div>
 
             {/* Actions */}
             <div className="flex items-center gap-2 pt-2">
-              <button
-                onClick={() => window.print()}
-                className="flex-1 py-2 rounded-md bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] hover:bg-[#FAF8F5]/80 text-[#4B5563] dark:text-[#9CA3AF] font-bold text-xs uppercase tracking-wider transition-colors"
+              <a
+                href={`/api/billing/invoice/${selectedBookingModal.id}/pdf`}
+                download={`${selectedBookingModal.bookingNumber || "Court-Invoice"}.pdf`}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(e) => {
+                  e.preventDefault();
+                  downloadPdfInvoice(
+                    `/api/billing/invoice/${selectedBookingModal.id}/pdf`,
+                    `${selectedBookingModal.bookingNumber || "Court-Invoice"}.pdf`
+                  );
+                }}
+                className="flex-1 py-2 rounded-md bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] hover:bg-[#FAF8F5]/80 text-[#8C6D23] dark:text-[#DFCA9B] font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                Print Voucher
-              </button>
+                <Download className="w-3.5 h-3.5" />
+                <span>PDF Bill</span>
+              </a>
               <button
                 onClick={() => setSelectedBookingModal(null)}
                 className="flex-1 py-2 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider transition-colors shadow-xs"
@@ -2695,6 +3458,325 @@ export default function MemberPortalPage(props: any) {
         </div>
       )}
 
+      {/* ── PRO SHOP ITEMIZED BILLING & CHECKOUT MODAL ── */}
+      {shopCheckoutModalOpen && (
+        <div className="fixed inset-0 z-50 bg-[#0B1320]/80 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-[#0E1522] rounded-xl max-w-2xl w-full border border-[#C5A059]/40 p-6 shadow-2xl relative space-y-5 my-8 animate-in fade-in zoom-in-95">
+            <button
+              onClick={() => setShopCheckoutModalOpen(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-[#FAF8F5] dark:hover:bg-[#121A28] text-[#6B7280] hover:text-[#0B1320] dark:hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Modal Header */}
+            <div className="flex items-center gap-3 pb-3 border-b border-[#E5DFD5] dark:border-[#222D3E]">
+              <div className="w-10 h-10 rounded-lg bg-[#921111] text-[#C5A059] flex items-center justify-center font-bold shrink-0">
+                <Receipt className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-serif font-bold text-lg text-[#0B1320] dark:text-white">
+                  Official Pro Shop Billing & Checkout
+                </h3>
+                <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
+                  Full catalog price, membership discount deduction, and ₹100 INR security deposit.
+                </p>
+              </div>
+            </div>
+
+            {shopCheckoutError && (
+              <div className="p-3 rounded-md bg-[#FDF4F4] dark:bg-[#1E0E10] border border-[#F8CCCC] dark:border-[#581A1D] text-[#921111] dark:text-[#F87171] text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{shopCheckoutError}</span>
+              </div>
+            )}
+
+            {/* Itemized Table of Every Product Bought (Full Price & Discount) */}
+            <div className="space-y-2">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-[#8C6D23] dark:text-[#DFCA9B] block">
+                Itemized Product Register ({shopBillingDetails.items.length} items)
+              </span>
+              <div className="border border-[#E5DFD5] dark:border-[#222D3E] rounded-lg overflow-x-auto max-h-56 overflow-y-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-[#FAF8F5] dark:bg-[#121A28] text-[#5A6578] dark:text-[#8E9CAE] font-bold border-b border-[#E5DFD5] dark:border-[#222D3E]">
+                    <tr>
+                      <th className="p-2.5">Item Description</th>
+                      <th className="p-2.5 text-right">Full Unit Price</th>
+                      <th className="p-2.5 text-center">Qty</th>
+                      <th className="p-2.5 text-right">Full Subtotal</th>
+                      <th className="p-2.5 text-right">Tier Disc.</th>
+                      <th className="p-2.5 text-right">Net Price</th>
+                      <th className="p-2.5 text-center">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E5DFD5]/60 dark:divide-[#222D3E]">
+                    {shopBillingDetails.items.map((item) => (
+                      <tr key={item.variant.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-900/30">
+                        <td className="p-2.5">
+                          <strong className="text-[#0B1320] dark:text-white block">{item.product.name}</strong>
+                          <span className="text-[10px] text-[#8E9CAE]">
+                            {item.product.brand} • {item.variant.size || "Standard"}
+                          </span>
+                        </td>
+                        <td className="p-2.5 text-right font-mono">{formatINR(item.fullUnitPricePaise)}</td>
+                        <td className="p-2.5 text-center font-mono font-bold">{item.quantity}</td>
+                        <td className="p-2.5 text-right font-mono">{formatINR(item.fullTotalPricePaise)}</td>
+                        <td className="p-2.5 text-right text-[#8C6D23] dark:text-[#DFCA9B] font-mono font-bold">
+                          {item.discountAmountPaise > 0 ? `-${formatINR(item.discountAmountPaise)}` : "₹0.00"}
+                        </td>
+                        <td className="p-2.5 text-right font-mono font-bold text-[#0B1320] dark:text-white">
+                          {formatINR(item.netPricePaise)}
+                        </td>
+                        <td className="p-2.5 text-center">
+                          <button
+                            type="button"
+                            onClick={() => removeShopCartItem(item.variant.id)}
+                            className="text-red-500 hover:text-red-700 p-1"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Detailed Billing Summary Breakdown Card */}
+            <div className="p-4 rounded-lg bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] space-y-2 text-xs">
+              <div className="flex justify-between text-[#5A6578] dark:text-[#8E9CAE]">
+                <span>Full Equipment Subtotal:</span>
+                <span className="font-mono font-bold text-[#0B1320] dark:text-white">
+                  {formatINR(shopBillingDetails.totalFullPricePaise)}
+                </span>
+              </div>
+              <div className="flex justify-between text-[#8C6D23] dark:text-[#DFCA9B] font-bold">
+                <span>
+                  Membership Privilege ({currentMemberTier} Tier — {shopDiscountPercent}% Off):
+                </span>
+                <span className="font-mono">-{formatINR(shopBillingDetails.totalDiscountPaise)}</span>
+              </div>
+              <div className="flex justify-between text-[#5A6578] dark:text-[#8E9CAE] pt-1 border-t border-[#E5DFD5]/60 dark:border-[#222D3E]">
+                <span>Net Equipment Amount:</span>
+                <span className="font-mono font-bold">{formatINR(shopBillingDetails.netSubtotalPaise)}</span>
+              </div>
+              {shopBillingDetails.securityDepositPaise > 0 && (
+                <div className="flex justify-between items-center bg-[#C5A059]/10 dark:bg-[#C5A059]/15 p-2 rounded border border-[#C5A059]/30 text-[#8C6D23] dark:text-[#DFCA9B] font-bold">
+                  <div className="flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-[#C5A059]" />
+                    <span>Security Deposit:</span>
+                    <span className="text-[10px] font-normal text-[#5A6578] dark:text-[#8E9CAE]">
+                      (Refundable)
+                    </span>
+                  </div>
+                  <span className="font-mono text-sm font-bold text-[#0B1320] dark:text-white">
+                    +{formatINR(shopBillingDetails.securityDepositPaise)}
+                  </span>
+                </div>
+              )}
+
+              {/* Final Payable Settlement */}
+              <div className="flex justify-between items-center text-sm font-serif font-bold text-[#0B1320] dark:text-white pt-2 border-t border-[#E5DFD5] dark:border-[#222D3E]">
+                <span>Total Payable Amount:</span>
+                <span className="font-mono text-lg text-[#921111] dark:text-[#DFCA9B]">
+                  {formatINR(shopBillingDetails.finalPayablePaise)}
+                </span>
+              </div>
+            </div>
+
+            {/* API KEY INPUT FIELD - Configured for Billing Authorization */}
+            <div className="p-3.5 rounded-lg border border-[#C5A059]/40 bg-[#FAF7EE] dark:bg-[#1C1608] space-y-1.5">
+              <div className="flex items-center gap-2">
+                <Key className="w-4 h-4 text-[#8C6D23] dark:text-[#DFCA9B]" />
+                <label className="font-serif font-bold text-xs text-[#0B1320] dark:text-white uppercase tracking-wider">
+                  Billing Gateway API Key
+                </label>
+                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#C5A059]/20 text-[#8C6D23] dark:text-[#DFCA9B] font-bold">
+                  {shopApiKey ? "KEY ATTACHED" : "OPTIONAL / SERVER DEFAULT"}
+                </span>
+              </div>
+              <input
+                type="text"
+                value={shopApiKey}
+                onChange={(e) => setShopApiKey(e.target.value)}
+                placeholder="Enter your API Key (e.g. sk_live_... or test key)"
+                className="w-full p-2.5 rounded border border-[#E5DFD5] dark:border-[#222D3E] bg-white dark:bg-[#121A28] font-mono text-xs text-[#0B1320] dark:text-white focus:outline-none focus:border-[#C5A059]"
+              />
+              <p className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF]">
+                Provide your API key to authorize and link this transaction, or leave blank to utilize server environment key (BILLING_API_KEY).
+              </p>
+            </div>
+
+            {/* Fulfillment & Payment Options */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div>
+                <label className="font-bold text-[10px] uppercase tracking-wider text-[#5A6578] dark:text-[#8E9CAE] block mb-1">
+                  Fulfillment Type
+                </label>
+                <select
+                  value={shopFulfillmentType}
+                  onChange={(e: any) => setShopFulfillmentType(e.target.value)}
+                  className="w-full p-2.5 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] text-xs text-[#0B1320] dark:text-white"
+                >
+                  <option value="CLICK_AND_COLLECT">Click & Collect at Pro Shop Counter</option>
+                  <option value="HOME_DELIVERY">Express Club Delivery</option>
+                </select>
+                {shopFulfillmentType === "HOME_DELIVERY" && (
+                  <input
+                    type="text"
+                    placeholder="Enter delivery address..."
+                    value={shopDeliveryAddress}
+                    onChange={(e) => setShopDeliveryAddress(e.target.value)}
+                    className="w-full mt-2 p-2 rounded border border-[#E5DFD5] dark:border-[#222D3E] bg-white dark:bg-[#121A28] text-xs"
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className="font-bold text-[10px] uppercase tracking-wider text-[#5A6578] dark:text-[#8E9CAE] block mb-1">
+                  Settlement Method
+                </label>
+                <select
+                  value={shopPaymentMethod}
+                  onChange={(e: any) => setShopPaymentMethod(e.target.value)}
+                  className="w-full p-2.5 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#121A28] text-xs text-[#0B1320] dark:text-white"
+                >
+                  <option value="UPI">UPI Digital Payment (Immediate)</option>
+                  <option value="CARD">Credit / Debit Card</option>
+                  <option value="MEMBER_TAB">Post to Member Tab Ledger</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Submit Action */}
+            <div className="flex items-center gap-2 pt-3 border-t border-[#E5DFD5] dark:border-[#222D3E]">
+              <button
+                type="button"
+                onClick={() => setShopCheckoutModalOpen(false)}
+                className="flex-1 py-2.5 rounded-md bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] hover:bg-[#FAF8F5]/80 text-[#4B5563] dark:text-[#9CA3AF] font-bold text-xs uppercase tracking-wider transition-colors"
+              >
+                Back to Shop
+              </button>
+              <button
+                type="button"
+                disabled={shopCheckoutSubmitting || shopBillingDetails.items.length === 0}
+                onClick={handleExecuteShopCheckout}
+                className="flex-1 py-2.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-md transition-all disabled:opacity-50 cursor-pointer"
+              >
+                {shopCheckoutSubmitting ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Authorize & Pay {formatINR(shopBillingDetails.finalPayablePaise)}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── OFFICIAL PRO SHOP BILLING RECEIPT & TAX INVOICE MODAL ── */}
+      {shopReceipt && (
+        <div className="fixed inset-0 z-50 bg-[#0B1320]/80 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-[#0E1522] rounded-xl max-w-lg w-full border border-[#C5A059]/40 p-6 shadow-2xl relative space-y-4 my-8 animate-in fade-in zoom-in-95">
+            <button
+              onClick={() => setShopReceipt(null)}
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-[#FAF8F5] dark:hover:bg-[#121A28] text-[#6B7280] hover:text-[#0B1320] dark:hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="text-center space-y-1 pb-3 border-b border-[#E5DFD5] dark:border-[#222D3E]">
+              <div className="w-12 h-12 rounded-full bg-[#921111]/10 text-[#921111] dark:text-[#DFCA9B] mx-auto flex items-center justify-center">
+                <CheckCircle2 className="w-7 h-7" />
+              </div>
+              <h3 className="font-serif font-bold text-lg text-[#0B1320] dark:text-white">
+                Pro Shop Settlement Complete
+              </h3>
+              <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
+                Order {shopReceipt.order?.orderNumber} • Invoice {shopReceipt.billing?.invoiceNumber}
+              </p>
+            </div>
+
+            {/* Receipt Itemized Details */}
+            <div className="p-4 rounded-lg bg-[#FAF8F5] dark:bg-[#121A28] border border-[#E5DFD5] dark:border-[#222D3E] space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-[#6B7280] dark:text-[#9CA3AF]">Member / Customer:</span>
+                <strong className="text-[#0B1320] dark:text-white">{shopReceipt.order?.customerName}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#6B7280] dark:text-[#9CA3AF]">Membership Tier:</span>
+                <strong className="text-[#8C6D23] dark:text-[#DFCA9B]">
+                  {shopReceipt.billing?.memberTier} ({shopReceipt.billing?.discountPercent}% Privilege)
+                </strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#6B7280] dark:text-[#9CA3AF]">Fulfillment:</span>
+                <span>{shopReceipt.order?.fulfillmentType}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#6B7280] dark:text-[#9CA3AF]">Full Equipment Subtotal:</span>
+                <span className="font-mono">{formatINR(shopReceipt.billing?.totalFullPricePaise || 0)}</span>
+              </div>
+              <div className="flex justify-between text-[#8C6D23] dark:text-[#DFCA9B] font-bold">
+                <span>Tier Privilege Discount:</span>
+                <span className="font-mono">-{formatINR(shopReceipt.billing?.totalDiscountPaise || 0)}</span>
+              </div>
+              {(shopReceipt.billing?.securityDepositPaise || 0) > 0 && (
+                <div className="flex justify-between items-center text-[#0B1320] dark:text-white font-bold bg-[#C5A059]/10 p-1.5 rounded">
+                  <span>Security Deposit:</span>
+                  <span className="font-mono">+{formatINR(shopReceipt.billing?.securityDepositPaise || 0)}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center pt-2 border-t border-[#E5DFD5] dark:border-[#222D3E] font-serif font-bold text-sm text-[#0B1320] dark:text-white">
+                <span>Final Payable Total:</span>
+                <span className="text-[#921111] dark:text-[#DFCA9B] font-mono text-base">
+                  {formatINR(shopReceipt.order?.finalPricePaise || shopReceipt.billing?.finalPayablePaise)}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+              <a
+                href={`/api/billing/invoice/${shopReceipt.order?.id}/pdf`}
+                download={`${shopReceipt.billing?.invoiceNumber || "Tax-Invoice"}.pdf`}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(e) => {
+                  e.preventDefault();
+                  downloadPdfInvoice(
+                    `/api/billing/invoice/${shopReceipt.order?.id}/pdf`,
+                    `${shopReceipt.billing?.invoiceNumber || "Tax-Invoice"}.pdf`
+                  );
+                }}
+                className="flex-1 py-2.5 rounded-md bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm transition-all text-center cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download PDF Invoice</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="py-2.5 px-3.5 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] bg-white dark:bg-[#121A28] text-[#0B1320] dark:text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5"
+              >
+                <Receipt className="w-3.5 h-3.5" />
+                <span>Print</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShopReceipt(null)}
+                className="py-2.5 px-4 rounded-md bg-[#FAF8F5] dark:bg-[#1C2433] border border-[#E5DFD5] dark:border-[#222D3E] text-[#0B1320] dark:text-white font-bold text-xs uppercase tracking-wider"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 6. CONFLICT & BOOKING ERROR INTERACTIVE POPUP DIALOG */}
       {bookingError && (
         <div className="fixed inset-0 z-50 bg-[#0B1320]/80 backdrop-blur-xs flex items-center justify-center p-4">
@@ -2883,6 +3965,25 @@ export default function MemberPortalPage(props: any) {
           </div>
         </div>
       )}
+
+      {/* ── RAZORPAY TRIAL GATEWAY MODAL (TEST MODE) ── */}
+      <RazorpayGatewayModal
+        isOpen={isRazorpayModalOpen}
+        onClose={() => {
+          setIsRazorpayModalOpen(false);
+          setBookingError(null);
+        }}
+        orderData={razorpayOrder}
+        customerDetails={{
+          name: member?.name || currentUser?.name || "Club Member",
+          phone: member?.phone || "+91 99999 99999",
+          email: member?.email || currentUser?.email || "guest@championsclub.in",
+        }}
+        onSuccess={handleRazorpayPaymentSuccess}
+        onError={(err) => setBookingError(err)}
+        errorMessage={bookingError}
+        isExternalProcessing={isBookingSubmitting}
+      />
     </div>
   );
 }

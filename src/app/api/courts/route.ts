@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getActiveHolds } from "@/lib/concurrency";
 import { ensureFridaySocialSession } from "@/lib/social";
+import { getActiveLocksForDate } from "@/lib/slot-lock";
 
 export async function GET(req: Request) {
   try {
@@ -24,12 +25,16 @@ export async function GET(req: Request) {
     let maintenance: any[] = [];
     let socialSessions: any[] = [];
     let holds: any[] = [];
+    let slotLocks: any[] = [];
 
     if (dateStr) {
       // Auto-ensure Friday Night Social Session for every Friday
       await ensureFridaySocialSession(dateStr);
 
-      holds = getActiveHolds(dateStr);
+      try {
+        holds = getActiveHolds(dateStr);
+      } catch {}
+
       const startOfDay = new Date(`${dateStr}T00:00:00.000Z`);
       const endOfDay = new Date(`${dateStr}T23:59:59.999Z`);
 
@@ -60,9 +65,13 @@ export async function GET(req: Request) {
         },
         include: { participants: true },
       });
+
+      // Fetch active TTL slot locks for all courts
+      const courtIds = courts.map((c: any) => c.id);
+      slotLocks = await getActiveLocksForDate(courtIds, dateStr);
     }
 
-    return NextResponse.json({ courts, bookings, maintenance, socialSessions, holds });
+    return NextResponse.json({ courts, bookings, maintenance, socialSessions, holds, slotLocks });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

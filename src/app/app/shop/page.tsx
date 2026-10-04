@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { formatINR, formatDateTime } from "@/lib/formatters";
 import { useAuth } from "@/lib/auth-context";
 import { calculateShopDiscount } from "@/lib/pricing";
+import { downloadPdfInvoice } from "@/lib/download-pdf";
 import {
   ShoppingBag,
   Search,
@@ -20,7 +21,11 @@ import {
   CreditCard,
   QrCode,
   Clock,
+  Key,
+  ShieldCheck,
+  Download,
 } from "lucide-react";
+import { SECURITY_DEPOSIT_PAISE } from "@/lib/billing";
 
 export default function ShopManagementPage({
   initialTab = "POS",
@@ -43,6 +48,7 @@ export default function ShopManagementPage({
   const [walkinName, setWalkinName] = useState("Walk-in Customer");
   const [walkinPhone, setWalkinPhone] = useState("+91 99999 99999");
   const [paymentMethod, setPaymentMethod] = useState("UPI");
+  const [billingApiKey, setBillingApiKey] = useState(process.env.NEXT_PUBLIC_BILLING_API_KEY || "");
   const [saleSuccess, setSaleSuccess] = useState<any>(null);
   const [saleError, setSaleError] = useState<string | null>(null);
 
@@ -134,7 +140,8 @@ export default function ShopManagementPage({
 
   const subtotalPaise = cart.reduce((sum, i) => sum + i.quantity * i.unitPricePaise, 0);
   const discountPaise = Math.round((subtotalPaise * discountPct) / 100);
-  const totalPaise = Math.max(0, subtotalPaise - discountPaise);
+  const securityDepositPaise = cart.length > 0 ? SECURITY_DEPOSIT_PAISE : 0; // ₹100 INR security deposit
+  const totalPaise = Math.max(0, subtotalPaise - discountPaise) + securityDepositPaise;
 
   const handleExecuteSale = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,21 +153,24 @@ export default function ShopManagementPage({
     }
 
     try {
-      const res = await fetch("/api/shop/sales", {
+      const res = await fetch("/api/billing/checkout", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(billingApiKey.trim() ? { "x-billing-api-key": billingApiKey.trim() } : {}),
+        },
         body: JSON.stringify({
           memberId: selectedMemberId || null,
           customerName: selectedMember ? selectedMember.name : walkinName,
           customerPhone: selectedMember ? selectedMember.phone : walkinPhone,
           fulfillmentType: "CLICK_AND_COLLECT",
           paymentMethod,
+          apiKey: billingApiKey.trim() || undefined,
           items: cart.map((i) => ({
             variantId: i.variantId,
             quantity: i.quantity,
             unitPricePaise: i.unitPricePaise,
           })),
-          discountPaise,
           userId: currentUser?.id,
         }),
       });
@@ -399,17 +409,39 @@ export default function ShopManagementPage({
                 <p>
                   Total Settled: <strong>{formatINR(saleSuccess.finalPricePaise)}</strong> ({saleSuccess.paymentMethod})
                 </p>
+                {saleSuccess.securityDepositPaise > 0 && (
+                  <p className="text-[11px] text-emerald-800 dark:text-emerald-200">
+                    Includes ₹100 INR Security Deposit ({formatINR(saleSuccess.securityDepositPaise)})
+                  </p>
+                )}
                 <div className="flex gap-2 pt-2">
+                  <a
+                    href={`/api/billing/invoice/${saleSuccess.id}/pdf`}
+                    download={`Invoice-${saleSuccess.orderNumber || "Receipt"}.pdf`}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      downloadPdfInvoice(
+                        `/api/billing/invoice/${saleSuccess.id}/pdf`,
+                        `Invoice-${saleSuccess.orderNumber || "Receipt"}.pdf`
+                      );
+                    }}
+                    className="flex-1 py-2 rounded bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm text-center cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download PDF</span>
+                  </a>
                   <button
                     onClick={() => window.print()}
-                    className="flex-1 py-2 rounded border border-[#E5DFD5] dark:border-[#222D3E] bg-white dark:bg-[#131C2E] text-[#0B1320] dark:text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5"
+                    className="py-2 px-3 rounded border border-[#E5DFD5] dark:border-[#222D3E] bg-white dark:bg-[#131C2E] text-[#0B1320] dark:text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5"
                   >
                     <Printer className="w-3.5 h-3.5" />
-                    Receipt
+                    Print
                   </button>
                   <button
                     onClick={() => setSaleSuccess(null)}
-                    className="flex-1 py-2 rounded bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-wider"
+                    className="py-2 px-3 rounded border border-[#E5DFD5] dark:border-[#222D3E] bg-white dark:bg-[#131C2E] hover:bg-gray-100 text-[#0B1320] dark:text-white font-bold text-xs uppercase tracking-wider"
                   >
                     New Sale
                   </button>
@@ -500,12 +532,36 @@ export default function ShopManagementPage({
                       <span className="font-mono">-{formatINR(discountPaise)}</span>
                     </div>
                   )}
+                  {securityDepositPaise > 0 && (
+                    <div className="flex justify-between text-[#8C6D23] dark:text-[#DFCA9B] font-bold bg-[#C5A059]/10 p-1.5 rounded">
+                      <span className="flex items-center gap-1">
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        <span>Security Deposit (₹100 INR):</span>
+                      </span>
+                      <span className="font-mono">+{formatINR(securityDepositPaise)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm font-serif font-bold text-[#0B1320] dark:text-white pt-2 border-t border-[#E5DFD5] dark:border-[#222D3E]">
                     <span>Total Due:</span>
                     <span className="text-[#921111] dark:text-[#DFCA9B] font-mono text-base font-bold">
                       {formatINR(totalPaise)}
                     </span>
                   </div>
+                </div>
+
+                {/* API Key Input */}
+                <div className="p-2.5 rounded-lg border border-[#E5DFD5] dark:border-[#222D3E] bg-[#FAF8F5] dark:bg-[#131C2E] space-y-1">
+                  <label className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[10px] text-[#5A6578] dark:text-[#8E9CAE]">
+                    <Key className="w-3 h-3 text-[#8C6D23] dark:text-[#DFCA9B]" />
+                    <span>Billing / Gateway API Key</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={billingApiKey}
+                    onChange={(e) => setBillingApiKey(e.target.value)}
+                    placeholder="Enter API Key (e.g. sk_live_...)"
+                    className="w-full p-2 rounded border border-[#E5DFD5] dark:border-[#222D3E] bg-white dark:bg-[#0E1726] font-mono text-xs text-[#0B1320] dark:text-white focus:outline-none focus:border-[#C5A059]"
+                  />
                 </div>
 
                 {/* Payment method */}
@@ -529,7 +585,7 @@ export default function ShopManagementPage({
                   disabled={cart.length === 0}
                   className="w-full py-3 rounded bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-xs uppercase tracking-widest shadow-md transition-all disabled:opacity-40"
                 >
-                  Charge {formatINR(totalPaise)} & Decrement Stock
+                  Charge {formatINR(totalPaise)} & Execute Billing Checkout
                 </button>
               </form>
             )}
@@ -560,6 +616,7 @@ export default function ShopManagementPage({
                   <th className="p-3">Status</th>
                   <th className="p-3">Date</th>
                   <th className="p-3 text-right">Total (₹)</th>
+                  <th className="p-3 text-right">Tax Invoice</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E5DFD5]/60 dark:divide-[#222D3E]">
@@ -578,6 +635,22 @@ export default function ShopManagementPage({
                     <td className="p-3 text-[#5A6578] dark:text-[#8E9CAE]">{formatDateTime(o.createdAt)}</td>
                     <td className="p-3 text-right font-mono font-bold text-[#0B1320] dark:text-white">
                       {formatINR(o.finalPricePaise)}
+                    </td>
+                    <td className="p-3 text-right">
+                      <a
+                        href={`/api/billing/invoice/${o.id}/pdf`}
+                        download={`Invoice-${o.orderNumber}.pdf`}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          downloadPdfInvoice(`/api/billing/invoice/${o.id}/pdf`, `Invoice-${o.orderNumber}.pdf`);
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#921111] hover:bg-[#720C0C] text-white font-bold text-[10px] uppercase tracking-wider shadow-2xs transition-colors cursor-pointer"
+                      >
+                        <Download className="w-3 h-3" />
+                        <span>PDF</span>
+                      </a>
                     </td>
                   </tr>
                 ))}

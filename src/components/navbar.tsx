@@ -97,7 +97,7 @@ export function Navbar() {
       const data = await res.json();
       if (data.success) {
         alert(
-          `Background Worker Completed:\n- Released Bookings: ${data.result.releasedBookings}\n- Expiry Alerts Sent: ${data.result.expiryAlertsSent}\n- Memberships Expired: ${data.result.membershipsExpired}\n- Stale Leads Alerted: ${data.result.staleLeadsAlerted}`
+          `Background Worker Completed:\n- Released Bookings: ${data.result.releasedBookings}\n- Slot Deposits Refunded (Gold ₹100): ${data.result.slotDepositsRefunded || 0}\n- Expiry Alerts Sent: ${data.result.expiryAlertsSent}\n- Memberships Expired: ${data.result.membershipsExpired}\n- Stale Leads Alerted: ${data.result.staleLeadsAlerted}`
         );
         fetchNotifications();
       }
