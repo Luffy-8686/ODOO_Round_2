@@ -504,10 +504,10 @@ export async function createCourtBookingAtomic(input: CreateBookingInput) {
           },
         });
 
-        const txCount = await tx.ledgerTransaction.count();
+        const randTxSuffix = Math.floor(1000 + Math.random() * 9000);
         await tx.ledgerTransaction.create({
           data: {
-            entryNumber: `TX-${new Date().getFullYear()}-${String(txCount + 1).padStart(6, "0")}`,
+            entryNumber: `TX-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}${randTxSuffix}`,
             description: `Court Booking - ${court.name} - ${booking.bookerName} (${booking.bookingNumber})${isGold ? " [Includes ₹100 Security Deposit]" : ""}`,
             module: "COURTS",
             creditPaise: totalPayablePaise,
@@ -614,10 +614,10 @@ export async function cancelBookingAtomic(bookingId: string, cancelReason?: stri
       }
 
       if (booking.securityDepositPaise > 0) {
-        const rxCount = await tx.ledgerTransaction.count();
+        const randRxSuffix = Math.floor(1000 + Math.random() * 9000);
         await tx.ledgerTransaction.create({
           data: {
-            entryNumber: `TX-${new Date().getFullYear()}-${String(rxCount + 1).padStart(6, "0")}`,
+            entryNumber: `TX-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}${randRxSuffix}`,
             description: `Security Deposit Refund - Court Booking ${booking.bookingNumber} (${booking.bookerName})`,
             module: "COURTS",
             debitPaise: booking.securityDepositPaise,

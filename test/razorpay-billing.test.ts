@@ -116,8 +116,18 @@ describe("Razorpay Trial Gateway & Membership Billing Rules", () => {
       const futureDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
       futureDate.setHours(7, 0, 0, 0);
 
+      const dayStart = new Date(futureDate);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(futureDate);
+      dayEnd.setHours(23, 59, 59, 999);
+
       await prisma.booking.deleteMany({
-        where: { courtId: court.id, startTime: futureDate },
+        where: {
+          OR: [
+            { courtId: court.id, startTime: futureDate },
+            { memberId: silverMember?.id, startTime: { gte: dayStart, lte: dayEnd } },
+          ],
+        },
       });
 
       const booking = await createCourtBookingAtomic({
