@@ -515,7 +515,7 @@ function LoginFormContent() {
                   className="w-full text-left p-3 rounded-md border border-[#E5DFD5] dark:border-[#222D3E] hover:border-[#C5A059] bg-[#FAF8F5]/60 dark:bg-[#121A28]/60 hover:bg-white dark:hover:bg-[#162032] transition-all flex items-center justify-between group disabled:opacity-50"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-xl flex-shrink-0">{persona.icon}</span>
+                    <span className="text-xl flex-shrink-0">{(persona as any).icon || "👤"}</span>
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="text-xs font-serif font-bold text-[#0B1320] dark:text-white group-hover:text-[#921111] dark:group-hover:text-[#DFCA9B]">

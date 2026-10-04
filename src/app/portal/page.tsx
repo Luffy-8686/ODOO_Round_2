@@ -43,6 +43,7 @@ import {
   Key,
   Receipt,
   Download,
+  RefreshCw,
 } from "lucide-react";
 
 const ALL_HOURLY_SLOTS = [
@@ -450,9 +451,22 @@ export default function MemberPortalPage(props: any) {
         // silent
       }
     }
+    if (myLockRef.current) {
+      const { courtId, slotTime } = myLockRef.current;
+      fetch("/api/slot-lock", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ courtId, slotTime, sessionId }),
+      }).catch(() => {});
+      setSlotLocks((prev) =>
+        prev.filter((l) => !(l.courtId === courtId && l.slotTime === slotTime && l.sessionId === sessionId))
+      );
+      myLockRef.current = null;
+    }
     setActiveHold(null);
     setConfirmSlotModal(null);
     setModalError(null);
+    setBookingError(null);
     await fetchMemberData();
   };
 
@@ -468,7 +482,7 @@ export default function MemberPortalPage(props: any) {
           socialSessionId: session.id,
           memberId: member?.id,
           guestName: member?.name || currentUser?.name || "Member",
-          guestPhone: member?.phone || currentUser?.phone || "+91 99999 99999",
+          guestPhone: member?.phone || (currentUser as any)?.phone || "+91 99999 99999",
         }),
       });
       const data = await res.json();
@@ -669,24 +683,6 @@ export default function MemberPortalPage(props: any) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [bookingDate, sessionId, member]
   );
-
-  /** Releases ephemeral lock and closes confirmation modal */
-  const handleCloseConfirmModal = useCallback(() => {
-    if (myLockRef.current) {
-      const { courtId, slotTime } = myLockRef.current;
-      fetch("/api/slot-lock", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ courtId, slotTime, sessionId }),
-      }).catch(() => {});
-      setSlotLocks((prev) =>
-        prev.filter((l) => !(l.courtId === courtId && l.slotTime === slotTime && l.sessionId === sessionId))
-      );
-      myLockRef.current = null;
-    }
-    setBookingError(null);
-    setConfirmSlotModal(null);
-  }, [sessionId]);
 
   const handleCancelBooking = async (bookingId: string) => {
     if (!confirm("Are you sure you want to cancel this booked slot? Your slot will be released back to the club schedule.")) {
@@ -2837,7 +2833,9 @@ export default function MemberPortalPage(props: any) {
                 >
                   {String(Math.floor(holdSecondsRemaining / 60)).padStart(2, "0")}:
                   {String(holdSecondsRemaining % 60).padStart(2, "0")}
-            {/* In-Modal Booking Error Alert (Always in front of modal) */}
+                </span>
+              </div>
+            </div>
             {modalError && (
               <div className="p-3.5 rounded-lg bg-red-50 dark:bg-red-950/80 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-xs flex items-start gap-2.5 shadow-sm animate-in fade-in slide-in-from-top-2">
                 <AlertCircle className="w-4 h-4 shrink-0 text-red-600 dark:text-red-400 mt-0.5" />

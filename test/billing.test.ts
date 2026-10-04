@@ -30,6 +30,7 @@ describe("Pro Shop Billing Service & Checkout Suite", () => {
           brand: "Wilson",
           category: "RACKET",
           pricePaise: 2400000, // ₹24,000.00
+          costPricePaise: 1800000,
           sku: "TEST-RKT-001",
           variants: {
             create: {
