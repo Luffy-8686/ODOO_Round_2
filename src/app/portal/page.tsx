@@ -203,7 +203,7 @@ export default function MemberPortalPage(props: any) {
       const remaining = Math.max(0, Math.ceil((activeHold.expiresAt - Date.now()) / 1000));
       setHoldSecondsRemaining(remaining);
       if (remaining <= 0) {
-        setModalError("⏱️ Checkout Hold Expired: The 300-second exclusive slot lock has expired. Please close this popup and select the slot again.");
+        setModalError(" Checkout Hold Expired: The 300-second exclusive slot lock has expired. Please close this popup and select the slot again.");
       }
     }, 1000);
 
@@ -278,7 +278,7 @@ export default function MemberPortalPage(props: any) {
       if (!res.ok || !data.success) {
         setBookingError(data.error || "Failed to join Social Session.");
       } else {
-        setSocialJoinSuccess(`🎉 Confirmed! You are registered for "${session.name}". See you on the court!`);
+        setSocialJoinSuccess(`Confirmed! You are registered for "${session.name}". See you on the court!`);
         await fetchMemberData();
       }
     } catch (err: any) {
@@ -621,7 +621,7 @@ export default function MemberPortalPage(props: any) {
                   onClick={() => setShowUpgradeModal(true)}
                   className="text-[10px] font-bold text-[#921111] dark:text-[#DFCA9B] hover:underline uppercase tracking-wider flex items-center gap-0.5"
                 >
-                  <span>✨ {isFree ? "Upgrade Tier" : "Change / Renew Plan"}</span>
+                  <span> {isFree ? "Upgrade Tier" : "Change / Renew Plan"}</span>
                 </button>
               )}
             </div>
