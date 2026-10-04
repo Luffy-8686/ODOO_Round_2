@@ -144,6 +144,7 @@ model Court {
   socialSessions    SocialSession[]
   maintenanceBlocks MaintenanceBlock[]
   waitlists         Waitlist[]
+  slotLocks         SlotLock[]
 }
 
 model Booking {
@@ -162,12 +163,18 @@ model Booking {
   durationMinutes Int       @default(60)
   status          String    @default("CONFIRMED") // PENDING, CONFIRMED, CANCELLED, COMPLETED, NO_SHOW
   source          String    @default("FRONT_DESK") // FRONT_DESK, MEMBER_PORTAL, PUBLIC_TRIAL, PHONE
-  totalPricePaise Int
+  totalPricePaise      Int
+  securityDepositPaise Int       @default(0) // ₹100 INR security deposit for GOLD court bookings
   isPeak          Boolean   @default(false)
   paymentStatus   String    @default("PAID") // UNPAID, PAID, REFUNDED, CHARGED_TO_TAB
   paymentMethod   String?   // CASH, CARD, UPI, ONLINE, TAB_CHARGE, FREE_TIER
   coachId         String?
   notes           String?
+  razorpayOrderId     String?
+  razorpayPaymentId   String?
+  depositRefundStatus String?   @default("NONE") // NONE, HELD, REFUNDED, FORFEITED
+  depositRefundedAt   DateTime?
+  razorpayRefundId    String?
   expiresAt       DateTime? // For 10-minute unpaid reservations
   cancelledAt     DateTime?
   cancelReason    String?
@@ -340,14 +347,18 @@ model ShopOrder {
   fulfillmentType String      @default("CLICK_AND_COLLECT") // CLICK_AND_COLLECT, HOME_DELIVERY
   deliveryAddress String?
   status          String      @default("PLACED") // PLACED, PACKED, OUT_FOR_DELIVERY, DELIVERED, READY_FOR_PICKUP, COLLECTED, CANCELLED
-  totalPricePaise Int
-  discountPaise   Int         @default(0)
-  finalPricePaise Int
-  paymentStatus   String      @default("PAID") // PENDING, PAID, REFUNDED
-  paymentMethod   String?     // CASH, CARD, UPI, ONLINE, TAB_CHARGE
-  notes           String?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  totalPricePaise      Int
+  discountPaise        Int         @default(0)
+  securityDepositPaise Int         @default(0) // ₹100 INR security deposit
+  finalPricePaise      Int
+  paymentStatus        String      @default("PAID") // PENDING, PAID, REFUNDED
+  paymentMethod        String?     // CASH, CARD, UPI, ONLINE, TAB_CHARGE
+  apiKeyRef            String?     // External Billing/Payment API Key reference
+  notes                String?
+  razorpayOrderId      String?
+  razorpayPaymentId    String?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
 
   items           OrderItem[]
   payments        Payment[]
@@ -765,4 +776,22 @@ model Setting {
   valueJson   String
   description String?
   updatedAt   DateTime @updatedAt
+}
+
+// -------------------------------------------------------------
+// TTL / EPHEMERAL SLOT LOCKING (300s)
+// -------------------------------------------------------------
+model SlotLock {
+  id        String   @id @default(cuid())
+  courtId   String
+  court     Court    @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  slotTime  DateTime // slot start time
+  sessionId String   // tab/browser session identifier
+  memberId  String?  // optional member link
+  expiresAt DateTime // TTL timestamp (now + 300s)
+  createdAt DateTime @default(now())
+
+  @@unique([courtId, slotTime])
+  @@index([courtId, slotTime])
+  @@index([expiresAt])
 }

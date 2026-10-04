@@ -51,6 +51,7 @@ export async function POST(req: Request) {
       notes: body.notes,
       userId: body.userId,
       userName: body.userName,
+      sessionId: body.sessionId || null,
     });
 
     return NextResponse.json({ success: true, booking });

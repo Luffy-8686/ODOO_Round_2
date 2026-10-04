@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getActiveLocksForDate } from "@/lib/slot-lock";
 
 export async function GET(req: Request) {
   try {
@@ -21,6 +22,7 @@ export async function GET(req: Request) {
     let bookings: any[] = [];
     let maintenance: any[] = [];
     let socialSessions: any[] = [];
+    let slotLocks: any[] = [];
 
     if (dateStr) {
       const startOfDay = new Date(`${dateStr}T00:00:00.000Z`);
@@ -53,9 +55,13 @@ export async function GET(req: Request) {
         },
         include: { participants: true },
       });
+
+      // Fetch active TTL slot locks for all courts
+      const courtIds = courts.map((c: any) => c.id);
+      slotLocks = await getActiveLocksForDate(courtIds, dateStr);
     }
 
-    return NextResponse.json({ courts, bookings, maintenance, socialSessions });
+    return NextResponse.json({ courts, bookings, maintenance, socialSessions, slotLocks });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

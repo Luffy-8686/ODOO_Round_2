@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import { calculateCourtPrice, isPeakHour } from "./pricing";
 import { logAudit } from "./audit";
 import { sendNotification } from "./notifications";
+import { isSlotLocked } from "./slot-lock";
 
 export interface CreateBookingInput {
   courtId: string;
@@ -18,6 +19,9 @@ export interface CreateBookingInput {
   coachId?: string | null;
   userId?: string | null;
   userName?: string;
+  sessionId?: string | null;
+  razorpayOrderId?: string | null;
+  razorpayPaymentId?: string | null;
 }
 
 /**
@@ -248,7 +252,17 @@ export async function createCourtBookingAtomic(input: CreateBookingInput) {
         }
       }
 
-      // 4. HARD OVERLAP CHECK (Invariant inside transaction)
+      // 4a. EPHEMERAL SLOT LOCK CHECK
+      // If another session holds an active TTL lock on this slot, reject booking.
+      // (Staff/front-desk bookings without sessionId bypass; matching sessionId passes)
+      const lockStatus = await isSlotLocked(input.courtId, start, input.sessionId || undefined);
+      if (lockStatus.locked) {
+        throw new Error(
+          `Slot is temporarily reserved by another user. Please try again in ${lockStatus.secondsRemaining ?? 300} seconds.`
+        );
+      }
+
+      // 4b. HARD OVERLAP CHECK (Invariant inside transaction)
       const availability = await checkCourtAvailability(input.courtId, start, end, undefined, tx);
       if (!availability.available) {
         throw new Error(`Double-booking prevented: ${availability.reason}`);
@@ -263,11 +277,20 @@ export async function createCourtBookingAtomic(input: CreateBookingInput) {
         durationMinutes: duration,
       });
 
-      // 6. Generate globally unique booking number
+      // 6. Security Deposit: Exactly ₹100 INR (10,000 paise) for GOLD members only on court bookings; ₹0 for all others
+      const isGold = (activeTier === "GOLD" || bookerType === "GOLD" || input.bookerType === "GOLD");
+      const securityDepositPaise = isGold ? 10000 : 0;
+      const totalPayablePaise = pricing.finalPricePaise + securityDepositPaise;
+
+      // 7. Generate globally unique booking number
       const randSuffix = Math.floor(1000 + Math.random() * 9000);
       const bookingNumber = `BK-${new Date().getFullYear()}-${Date.now().toString().slice(-5)}${randSuffix}`;
 
-      // 7. Create booking record
+      // 8. Create booking record
+      const bookingNotes = isGold
+        ? (input.notes ? `${input.notes} | Gold Member Booking (Security Deposit: ₹100 INR)` : "Gold Member Booking (Security Deposit: ₹100 INR)")
+        : input.notes;
+
       const booking = await tx.booking.create({
         data: {
           bookingNumber,
@@ -283,16 +306,22 @@ export async function createCourtBookingAtomic(input: CreateBookingInput) {
           status: "CONFIRMED",
           source: input.source || "FRONT_DESK",
           totalPricePaise: pricing.finalPricePaise,
+          securityDepositPaise,
+          depositRefundStatus: isGold ? "HELD" : "NOT_APPLICABLE",
+          razorpayOrderId: input.razorpayOrderId || null,
+          razorpayPaymentId: input.razorpayPaymentId || null,
           isPeak,
-          paymentStatus: pricing.finalPricePaise === 0 ? "PAID" : input.paymentMethod ? "PAID" : "UNPAID",
-          paymentMethod: pricing.finalPricePaise === 0 ? "FREE_TIER" : input.paymentMethod || "CASH",
-          notes: input.notes,
+          paymentStatus: totalPayablePaise === 0 ? "PAID" : input.paymentMethod ? "PAID" : "PAID",
+          paymentMethod: isGold
+            ? (input.paymentMethod || "RAZORPAY")
+            : (pricing.finalPricePaise === 0 ? "FREE_TIER" : input.paymentMethod || "CASH"),
+          notes: bookingNotes,
           coachId: input.coachId,
         },
       });
 
-      // 8. Record payment & ledger entry if price > 0 and paid
-      if (booking.paymentStatus === "PAID" && booking.totalPricePaise > 0) {
+      // 9. Record payment & ledger entry if totalPayablePaise > 0
+      if (totalPayablePaise > 0) {
         const receiptCount = await tx.payment.count();
         const receiptNumber = `RCP-${new Date().getFullYear()}-${String(receiptCount + 1).padStart(5, "0")}`;
 
@@ -300,12 +329,14 @@ export async function createCourtBookingAtomic(input: CreateBookingInput) {
           data: {
             receiptNumber,
             bookingId: booking.id,
-            amountPaise: booking.totalPricePaise,
-            method: booking.paymentMethod || "CASH",
+            amountPaise: totalPayablePaise,
+            method: booking.paymentMethod || "UPI",
             status: "SUCCESS",
             module: "COURT",
             referenceId: booking.bookingNumber,
-            notes: `Court Booking: ${court.name} (${start.toLocaleDateString()})`,
+            notes: isGold
+              ? `Court Booking: ${court.name} (Complimentary Access + ₹100 Security Deposit)`
+              : `Court Booking: ${court.name} (${start.toLocaleDateString()})`,
           },
         });
 
@@ -313,11 +344,11 @@ export async function createCourtBookingAtomic(input: CreateBookingInput) {
         await tx.ledgerTransaction.create({
           data: {
             entryNumber: `TX-${new Date().getFullYear()}-${String(txCount + 1).padStart(6, "0")}`,
-            description: `Court Booking - ${court.name} - ${booking.bookerName} (${booking.bookingNumber})`,
+            description: `Court Booking - ${court.name} - ${booking.bookerName} (${booking.bookingNumber})${isGold ? " [Includes ₹100 Security Deposit]" : ""}`,
             module: "COURTS",
-            creditPaise: booking.totalPricePaise,
-            paymentMethod: booking.paymentMethod || "CASH",
-            taxAmountPaise: Math.round(booking.totalPricePaise * 0.18),
+            creditPaise: totalPayablePaise,
+            paymentMethod: booking.paymentMethod || "UPI",
+            taxAmountPaise: Math.round(pricing.finalPricePaise * 0.18),
             referenceType: "BOOKING",
             referenceId: booking.id,
           },
@@ -373,12 +404,15 @@ export async function cancelBookingAtomic(bookingId: string, cancelReason?: stri
         throw new Error("Booking not found or already cancelled.");
       }
 
+      const isDepositRefundable = (booking.securityDepositPaise || 0) > 0;
       const updated = await tx.booking.update({
         where: { id: bookingId },
         data: {
           status: "CANCELLED",
           cancelledAt: new Date(),
           cancelReason: cancelReason || "Cancelled by user/staff",
+          depositRefundStatus: isDepositRefundable ? "REFUNDED" : booking.depositRefundStatus,
+          depositRefundedAt: isDepositRefundable ? new Date() : undefined,
         },
       });
 
@@ -408,12 +442,32 @@ export async function cancelBookingAtomic(bookingId: string, cancelReason?: stri
         });
       }
 
+      if (booking.securityDepositPaise > 0) {
+        const rxCount = await tx.ledgerTransaction.count();
+        await tx.ledgerTransaction.create({
+          data: {
+            entryNumber: `TX-${new Date().getFullYear()}-${String(rxCount + 1).padStart(6, "0")}`,
+            description: `Security Deposit Refund - Court Booking ${booking.bookingNumber} (${booking.bookerName})`,
+            module: "COURTS",
+            debitPaise: booking.securityDepositPaise,
+            paymentMethod: "REFUND",
+            taxAmountPaise: 0,
+            referenceType: "BOOKING",
+            referenceId: booking.id,
+          },
+        });
+      }
+
       await logAudit({
         userId,
         action: "CANCEL",
         entity: "BOOKING",
         entityId: booking.id,
-        details: { bookingNumber: booking.bookingNumber, reason: cancelReason },
+        details: {
+          bookingNumber: booking.bookingNumber,
+          reason: cancelReason,
+          refundedDepositPaise: booking.securityDepositPaise,
+        },
         tx,
       });
 
